@@ -1,4 +1,4 @@
-function sylmat{T<:Number}(g::AbstractVector{T}, u::AbstractVector, v::AbstractVector{T})
+function sylmat(g::AbstractVector{T}, u::AbstractVector, v::AbstractVector{T}) where {T<:Number}
 #
 #  sylmat generates the Sylvester resultant matrix
 #    of polynomial g, u, v

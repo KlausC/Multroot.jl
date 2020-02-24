@@ -7,19 +7,17 @@
 # at the given point and the corresponding error value.
 #
 
-if ! isdefined(:Horner)
-type Horner{S<:Number,T<:Number,U<:AbstractFloat,V<:AbstractFloat}
+mutable struct Horner{S<:Number,T<:Number,U<:AbstractFloat,V<:AbstractFloat}
     x::S							# evaluation spot
     coeff::AbstractVector{T}		# polynomial coefficients
     devx::U							# absolute error estimatin for x
     devcoeff::AbstractVector{V}		# absolute error estimatins for coefficients
     valid::Int						# evaluation status
 end
-end
 
 # Create Horner table for evaluation at point x.
 # Provide polynomial coefficients and optionally absolute errors for x and the coefficients. 
-function Horner{S<:Number,T<:Number,U<:AbstractFloat,V<:AbstractFloat}(x::S, coeff::AbstractVector{T}, devx::U, devcoeff::AbstractVector{V})
+function Horner(x::S, coeff::AbstractVector{T}, devx::U, devcoeff::AbstractVector{V}) where {S<:Number,T<:Number,U<:AbstractFloat,V<:AbstractFloat}
 
     if devcoeff == []
         devcoeff = abs(coeff) * eps(promote_type(T,Float64))
@@ -38,7 +36,7 @@ end
 # return the m'th deviation of the polynomial and the error estimation
 # If m >= degree, all deviations ot the polynomial have been calculated at x.
 # Further calls just return the cached results.
-function call{S,T,U,V}(h::Horner{S,T,U,V}, m::Int)
+function call(h::Horner{S,T,U,V}, m::Int) where {S,T,U,V}
 #function (h::Horner{S,T,U,V})(m::Int)
     if m < 0 throw(ArgumentError("index $m is not >= 0")) end
 	n = length(h.coeff) - 1
@@ -64,7 +62,7 @@ end
 #
 # evaluate polynomial f and all derivatives at given approximate root-values z
 #
-function horner_analysis{S<:Number,T<:Number}(z::AbstractVector{S}, f::AbstractVector{T})
+function horner_analysis(z::AbstractVector{S}, f::AbstractVector{T}) where {S<:Number,T<:Number}
     thresh = 1000.0
     m = length(z)
     n = length(z)-1

@@ -12,7 +12,7 @@
    output  s --- the smallest singular value
            x --- the associated right singular vector
 """
-function zminsv{S<:Real,U<:AbstractFloat}(A::AbstractArray{S,2}, tol::U)
+function zminsv(A::AbstractArray{S,2}, tol::U) where {S<:Real,U<:AbstractFloat}
     E = one(S)
     m, n = size(A)           	# get the dimensions of A
     if m < n-1 throw(ArgumentError("zminsv only if m >= n-1 but $m < $n-1")) end

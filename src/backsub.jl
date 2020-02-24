@@ -1,4 +1,4 @@
-function backsub{T<:Number}(A::AbstractArray{T,2}, b::AbstractVector{T})
+function backsub(A::AbstractArray{T,2}, b::AbstractVector{T}) where {T<:Number}
 #
 # assume A is an upper triangular matrix
 # backsub performs backward substitution to solve Ax=b

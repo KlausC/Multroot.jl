@@ -12,7 +12,7 @@ function hqrt(t, b)
    z
 end
 
-function hqrt1{T}(t::AbstractArray{T,2}, n::Int=1)
+function hqrt1(t::AbstractArray{T,2}, n::Int=1) where T
 #
 #  transformation using the t from hessqr on unit vector e(n)
 #

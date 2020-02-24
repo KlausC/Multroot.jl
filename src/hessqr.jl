@@ -1,4 +1,4 @@
-function hessqr{T<:Number}(A::AbstractArray{T,2})
+function hessqr(A::AbstractArray{T,2}) where {T<:Number}
 #
 #  hessqr performs QR decomposition on an upper
 #      Hessenberg matrix

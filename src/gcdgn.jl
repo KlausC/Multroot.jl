@@ -1,4 +1,4 @@
-function gcdgn{T<:Number}(p::AbstractVector{T}, q::AbstractVector{T}, g0::AbstractVector{T}, u0::AbstractVector{T}, v0::AbstractVector{T})
+function gcdgn(p::AbstractVector{T}, q::AbstractVector{T}, g0::AbstractVector{T}, u0::AbstractVector{T}, v0::AbstractVector{T}) where {T<:Number}
 #
 #  Finds extended GCD of polynomial p and q by Gauss-Newton
 #  iteration, such that

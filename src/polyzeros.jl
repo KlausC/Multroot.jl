@@ -5,7 +5,7 @@
 # where l defines a pejorative multiplicity structure of the polynomial.
 # The stored values are obtaind by z[jj] and mult[jj] from the original arrays.
 #
-immutable PolyZeros{S<:Number}
+struct PolyZeros{S<:Number}
     z::AbstractVector{S}		  # the distinct root values, already ordered
     mult::AbstractArray{Int}	# the multiplicity structure of the zeros, reordered
     real_coefficients::Bool   # indicates, that polynomial coefficients are real
@@ -13,7 +13,7 @@ immutable PolyZeros{S<:Number}
 end
 
 # Constructor for PolyZeros - do not re-order elements
-function PolyZeros{S}(zz::AbstractVector{S}, ll::AbstractVector{Int} = Int[])
+function PolyZeros(zz::AbstractVector{S}, ll::AbstractVector{Int} = Int[]) where S
   if length(ll) == 0 ll = ones(Int, length(zz)) end
   zz, ll = filter_duplicates(zz, ll)
   m = length(zz)
@@ -69,10 +69,10 @@ function lessabs(a::S, b::T) where {S<:Number,T<:Number}
     real(a) < real(b) || ( real(a) == real(b) && imag(a) > imag(b) )
 end
 
-function less_real_first{S<:Number, T<:Number}(a::S, b::T)
+function less_real_first(a::S, b::T) where {S<:Number, T<:Number}
     ra, rb = real(a), real(b)
     ia, ib = imag(a), imag(b)
-    ra < rb ? true : ra > rb ? false : abs(ia) < abs(ib) ? true : abs(ia) > abs(ib) ? false: ia < ib
+    ra < rb ? true : ra > rb ? false : abs(ia) < abs(ib) ? true : abs(ia) > abs(ib) ? false : ia < ib
 end
 
 # Determine type of polynomial coefficients given the roots (with type)
@@ -218,7 +218,7 @@ end
 #
 # calculate product over j of (x - z[j])^ll[j]
 #
-function evaluate{S,T}(z::PolyZeros{S}, x::T, ll::AbstractVector{Int})
+function evaluate(z::PolyZeros{S}, x::T, ll::AbstractVector{Int}) where {S,T}
 
   l = ll
 	s = one(promote_type(T,S))
@@ -246,5 +246,5 @@ function evaluate{S,T}(z::PolyZeros{S}, x::T, ll::AbstractVector{Int})
     end
     isreal(s) ? real(s) : s
 end
-evaluate{S,T}(z::PolyZeros{S}, x::T) = evaluate(z, x, z.mult)
+evaluate(z::PolyZeros{S}, x::T) where {S,T} = evaluate(z, x, z.mult)
 

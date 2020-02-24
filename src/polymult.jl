@@ -1,7 +1,7 @@
 import Polynomials
 using Polynomials
 
-function polymult{T}(z::AbstractVector{T}, l::AbstractVector{Int})
+function polymult(z::AbstractVector{T}, l::AbstractVector{Int}) where {T<:Number}
 #
 # construct monic polynomial from its roots
 # use sorting and a special order of processing to increase accuray.
@@ -22,12 +22,12 @@ end
 # Calculate the coefficient operator of the pejorative manifold
 # PolyRoots is used to leverage calculation of (x-z[j]) - products
 #
-function polyG{S}(pz::PolyZeros{S})
+function polyG(pz::PolyZeros{S}) where S
   products(isreal(pz), pz.z, pz.mult)[2:end]
 end
 
 # The derivative of G at point z
-function polyDG{S}(pz::PolyZeros{S})
+function polyDG(pz::PolyZeros{S}) where S
     m = length(pz.z)
     ll = pz.mult
     s = products(isreal(pz), pz.z, ll-1)

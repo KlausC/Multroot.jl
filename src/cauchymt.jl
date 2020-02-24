@@ -1,4 +1,4 @@
-function cauchymt{T}(f::AbstractVector{T}, k::Int)
+function cauchymt(f::AbstractVector{T}, k::Int) where T
 #
 # generate a k-column Cauchy matrix of polynomial f
 #

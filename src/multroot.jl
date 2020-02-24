@@ -1,4 +1,4 @@
-function multroot{T<:Number,S<:Real}( p::AbstractVector{T}, tol::S = 1e-10)
+function multroot( p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Real}
 #  
 #  Finds all roots of a real or complex polynomial p,
 # 

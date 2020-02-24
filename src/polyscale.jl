@@ -13,7 +13,7 @@ using Polynomials
 
 FloatOrComplex = Union{AbstractFloat, Complex, Complex{Float32}, Complex{BigFloat}}
 
-function polyscale{T<:FloatOrComplex}(P::Poly{T})
+function polyscale(P::Poly{T}) where {T<:FloatOrComplex}
 	  n = length(P.a) -1
     shift = - P.a[n] / n	
     P = polytransform(P, shift)	
@@ -98,8 +98,8 @@ function minimize(f::AbstractVector{T}, g::AbstractVector{T}) where T<:Real
   n::Int = length(f)
   n == length(g) || error(ArgumentError("lengths of f1 and g1 are different"))
 
-  const Z = zero(T)
-  const inf = typemax(T)
+  Z = zero(T)
+  inf = typemax(T)
 
   # remove unwanted infinities
   f, g = unzip(Iterators.filter(x -> x[1] !=  inf, zip(f, g)))::NTuple{2,AbstractArray{T}}
@@ -166,16 +166,12 @@ maximum1(itr) = mapreduce(identity, Base.scalarmax, lowerbound(itr), itr)
 lowerbound(itr) = lowerbound(eltype(itr))
 lowerbound(f::Function, itr) = lowerbound(promote_type(Base.return_types(f, (eltype(itr),))))
 lowerbound(T::Type) = error("no lower bound for type $T")
-lowerbound(::Type{T}) where T<:{AbstractFloat,Unsigned} = typemin(T)
+lowerbound(::Type{T}) where T<:Union{AbstractFloat,Unsigned} = typemin(T)
 lowerbound(S::Type{Rational{T}}) where T<:Integer = typemin(S)
 lowerbound(::Type{String}) = ""
 
-
-
-
-
-Base.mr_empty(::typeof(identity),::typeof(Base.scalarmax),::Type{T}) where T<:Real = typemin(T)
-Base.mr_empty(::typeof(identity),::typeof(Base.scalarmin),::Type{T}) where T<:Real = typemax(T)
+#Base.mr_empty(::typeof(identity),::typeof(Base.scalarmax),::Type{T}) where T<:Real = typemin(T)
+#Base.mr_empty(::typeof(identity),::typeof(Base.scalarmin),::Type{T}) where T<:Real = typemax(T)
 
 """
   `unzip(itr)`

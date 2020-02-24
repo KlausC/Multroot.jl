@@ -1,4 +1,4 @@
-function scalsq{T<:Number}(A::AbstractArray{T,2}, b::AbstractVector{T}, w = nothing)
+function scalsq(A::AbstractArray{T,2}, b::AbstractVector{T}, w = nothing) where {T<:Number}
 #
 #  Solving the scaled least squares problem 
 #          W(Ax - b) = 0

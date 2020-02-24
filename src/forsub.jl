@@ -1,4 +1,4 @@
-function forsub{T<:Number}(A::AbstractArray{T,2}, b::AbstractVector{T})
+function forsub(A::AbstractArray{T,2}, b::AbstractVector{T}) where {T<:Number}
 #
 # assume A is an lower triangular matrix
 # forsub performs forward substitution to solve Ax=b

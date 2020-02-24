@@ -7,6 +7,8 @@ Using methods develped by Zhang et. al.
 """
 module Multroot
 
+using Printf
+
 export multroot, gcdroot, pejroot
 export sylves, sylves1, sylmat, cauchymt, scalsq
 export hqrt, hessqr, forsub, backsub

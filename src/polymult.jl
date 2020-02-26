@@ -15,36 +15,34 @@ function polymult(z::AbstractVector{T}, l::AbstractVector{Int}) where {T<:Number
 #            ff Poly representing the product (x - z[k]) ^ l[k]
 #
     # println("polymult($(z), $(l)")
-    z = PolyZeros(z)
+    # z = PolyZeros(z)
     products(z, l)
 end
 
 # Calculate the coefficient operator of the pejorative manifold
 # PolyRoots is used to leverage calculation of (x-z[j]) - products
 #
-function polyG(pz::PolyZeros{S}) where S
-  products(isreal(pz), pz.z, pz.mult)[2:end]
+function polyG(z, mult)
+    products(z, mult)[2:end]
 end
 
 # The derivative of G at point z
-function polyDG(pz::PolyZeros{S}) where S
-    m = length(pz.z)
-    ll = pz.mult
-    s = products(isreal(pz), pz.z, ll-1)
+function polyDG(zz::AbstractVector{S}, ll) where S
+    m = length(zz)
+    s = products(zz, ll .- 1)
+    n0 = length(s)
     n = sum(ll)
     Df = zeros(S, n, m)
-    p1 = zeros(S, 2)
 
     for j = 1:m
-      copy!(view(Df,1:n,j), s)
-      ix = length(s)
-      for k = 1:m
-        if k != j && ll[j] > 0
-          zk = pz.z[k]
-          ix = product1!(ix, view(Df,1:n,j), 1, zk)
-          scale!(view(Df,1:n,j), -ll[k])
+        Df[1:n0,j] .= s
+        ix = n0
+        for k = 1:m
+            if k != j && ll[j] > 0
+                ix = product1!(ix, view(Df,1:n,j), 1, -zz[k])
+            end
         end
-      end
+        Df[1:n,j] .*= -ll[j]
     end
     isreal(Df) ? real(Df) : Df
 end
@@ -92,13 +90,15 @@ function product(p::AbstractVector{S}, q::AbstractVector{T}) where {S<:Number,T<
   product!(zeros(U, length(p) + length(q) - 1), p, q)
 end
 
+
+
 """
-  `products(z::PolyZeros{S}`
+    products(z::Vector{T}, ll::Vector{Int})
 
 Calculate coefficients of polynomial given by its roots with multiplicities.
 The z should be ordered by increasing absolute value for better accuracy. 
 """
-function products(creal::Bool, z::AbstractVector{T}, ll::AbstractVector{Int}) where T <:Number
+function products(z::AbstractVector{T}, ll::AbstractVector{Int}) where T <:Number
   m = length(z)
   m == length(ll) || throw(ArgumentError("root vector and muliplicities have differnet length"))
   all(ll .>= 0) || throw(ArgumentError("multiplicities must not be negative"))
@@ -123,7 +123,7 @@ function products(creal::Bool, z::AbstractVector{T}, ll::AbstractVector{Int}) wh
       elseif zi > Z
         zk = 2zk
         zi = abs2(z[k])
-        product2!(ix, r, ll[k], zk, zi)
+        ix = product2!(ix, r, ll[k], zk, zi)
       end
     end
   end
@@ -138,7 +138,7 @@ function product1!(ix::Int, r::AbstractVector{S}, ll::Int, zk::T) where {S<:Numb
     for i = ix:-1:1
       r[i+1] = muladd(r[i], zk, r[i+1])
     end
-    ix += ll
+    ix += 1
   end
   ix  
 end
@@ -154,7 +154,7 @@ function product2!(ix::Int, r::AbstractVector{S}, ll::Int, p1::T, p2::T) where {
       r[i+2] = muladd(r[i], p2, rr)
     end
     r[2] = muladd(r[1], p1, r[2])
-    ix += 2ll
+    ix += 2
   end
   ix
 end

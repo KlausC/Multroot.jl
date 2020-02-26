@@ -21,40 +21,42 @@ function zminsv(A::AbstractArray{S,2}, tol::U) where {S<:Real,U<:AbstractFloat}
     if m == n - 1				# Corner case when s == 0 is guaranteed 
         y = normalize([backsub(R[1:m,1:m], R[1:m,end]); -E])
         ss = zero(S)
-	      # println("zminsv (m=$m, n=$n) returns ss= $ss y = $y")
+	    # println("zminsv (m=$m, n=$n) returns ss= $ss y = $y")
         return ss, y
     end
 
     cr = U(0)
-    tau = norm(A, Inf)     			# get the magnitude of rows as scaler
-	  x = normalize(map(S, rand(n)) * 2 - 1)		# random initial vector (row)
-	  r = R * x
-    xn = E
-	  y = x
+    scale = norm(A, Inf)     		    # get the magnitude of rows as scaler
+	a = scale * normalize(randn(S,n))	# random initial vector (row)
+    b = [scale; zeros(n)]
 
-    for j = 1:5
-		    D = [ x' * tau * 2; R]		# Least squares problem min |D z - b|²
-		    b = [ (xn * xn - E) * tau; r ]
-        QQ, RR = hessqr(D) 			# Hessenberg QR decomp. of stacked matrix
-        z = hqrt(QQ, b)        		# same QQ on b
-   
-        z = backsub(RR[1:n,1:n], z[1:n])	# backward substitution to solve RR z = QQ' b
-        y = x - z					# new iteration
-		    xn = norm(y)
-        r = R * y
-        ss = norm(r) / xn
+    T, trans = hessqr([a'; R])
+    z = hqrt(trans, b)
+
+    x = backsub(T[1:n,1:n], z[1:n])
+    normalize!(x)
+	
+    r = [scale * x'; R] * x
+    r = r - b
+
+    for k = 1:5
+		D = [ x' * scale * 2; R]		# Least squares problem min |D z - b|²
+        T, trans = hessqr(D) 			# Hessenberg QR decomp. of stacked matrix
+        z = hqrt(trans, r)        		# same QQ on b
+        u = backsub(T[1:n,1:n], z[1:n])	# backward substitution to solve RR z = QQ' b
+        y = normalize(x - u)			# new iteration
+        r = [scale * y'; R] * y - b
+        ss = norm(r[2:n])
         crk = norm(y-x)
-		    # println("ss = $ss crk = $crk")
+		#println("k = $k ss = $ss crk = $crk")
       
-        if (j == 1 && crk < tol ) || (j > 1 &&  crk < cr && crk^2 / (cr - crk) < tol) 
+        if (k == 1 && crk < tol ) || (k > 1 &&  (crk >= cr || crk^2 / (cr - crk) < tol)) 
             break
         end
         x = y
         cr = crk
-		    # println("hessenberg least square iteration $j: smin = $ss")
     end
-	  x = y / xn
-	  # println("zminsv (m=$m, n=$n) returns ss= $ss x = $x")
-    ss, x
+	# println("zminsv (m=$m, n=$n) returns ss= $ss x = $x")
+    ss, y
 end
 

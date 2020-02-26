@@ -4,8 +4,8 @@ function hessqr(A::AbstractArray{T,2}) where {T<:Number}
 #      Hessenberg matrix
 #
 #  assume A is a Hessenberg matrix
-#  output  B -- upper triangular
-#          t -- rotation used
+#  output  R -- upper triangular
+#          Q -- rotation used
 #
    m, n = size(A)
    if m < n throw(ArgumentError("m ($m) must be >= n ($n)")) end
@@ -27,5 +27,5 @@ function hessqr(A::AbstractArray{T,2}) where {T<:Number}
            end
        end
    end
-   Q, R
+   R, Q
 end

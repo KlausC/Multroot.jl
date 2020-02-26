@@ -14,17 +14,19 @@ end
 
 # Constructor for PolyZeros - do not re-order elements
 function PolyZeros(zz::AbstractVector{S}, ll::AbstractVector{Int} = Int[]) where S
-  if length(ll) == 0 ll = ones(Int, length(zz)) end
-  zz, ll = filter_duplicates(zz, ll)
-  m = length(zz)
-  jj = sortperm(zz, lt = lessabs)
-  zz = zz[jj]
-  ll = ll[jj]
-  CT = coeffstype(zz, ll)
-  creal = CT <: Real
-  ind = BitArray(zeros(Bool,2m))
-  _variables!(creal, zz, ind)
-  PolyZeros(zz, ll, creal, ind)
+    if length(ll) == 0
+        ll = ones(Int, length(zz))
+    end
+    zz, ll = filter_duplicates(zz, ll)
+    m = length(zz)
+    jj = sortperm(zz, lt = lessabs)
+    zz = zz[jj]
+    ll = ll[jj]
+    CT = coeffstype(zz, ll)
+    creal = CT <: Real
+    ind = BitArray(zeros(Bool,2m))
+    _variables!(creal, zz, ind)
+    PolyZeros(zz, ll, creal, ind)
 end
 
 import Polynomials: roots, degree
@@ -77,18 +79,19 @@ end
 
 # Determine type of polynomial coefficients given the roots (with type)
 function coeffstype(z::AbstractVector{S}, ll::AbstractVector{Int}) where S<:Number
-  if isreal(z)
-    return S
-  end
-  jj = find(x-> !isreal(x), z) # extract all complex elements
-  for j in jj
-    jc = findfirst(x-> x == conj(z[j]), z)
-    if jc == 0 || ll[j] != ll[jc]
-      return S
+    if isreal(z)
+        return real(S)
     end
-  end
-  real(S)
+    jj = findall(x-> !isreal(x), z) # extract all complex elements
+    for j in jj
+        jc = findfirst(x-> x == conj(z[j]), z)
+        if jc === nothing || ll[j] != ll[jc]
+            return S
+        end
+    end
+    real(S)
 end
+coeffstype(z::PolyZeros) = coeffstype(z.z, z.mult)
 
 """
     `filter_duplicates(roots, multiplicities)`
@@ -107,7 +110,7 @@ function filter_duplicates(zz::AbstractVector{S}, ll::AbstractVector{Int}) where
   for k = 1:m
     zk = zz[k]
     j = findfirst(x -> x == zk, z)
-    if j > 0
+    if j !== nothing
       l[j] += ll[k]
     else
       push!(z, zk)
@@ -134,7 +137,7 @@ function _variables!(creal::Bool, z::Vector{S}, ind::BitArray) where S<:Number
   m = length(z)
   T = real(S)
   if creal && (! (S<:Real) || any(ind) )
-    v = Array{T}(m)
+    v = Array{T}(undef, m)
     k = 1
     while k <= m
       zk = z[k]

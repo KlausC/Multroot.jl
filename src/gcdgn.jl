@@ -92,3 +92,16 @@ function gcdgn(p::AbstractVector{T}, q::AbstractVector{T}, g0::AbstractVector{T}
     g, u, v, bke0, bke
 end 
 
+function conv(p::Vector{T}, q::Vector{S}) where {S,T}
+    R = promote_type(S, T)
+    n = length(p)
+    m = length(q)
+    a = zeros(R, m + n - 1)
+    for i = 1:n
+        for j = 1:m
+            a[i+j-1] += p[i] * q[j]
+        end
+    end
+    a
+end
+

@@ -8,7 +8,7 @@ function forsub(A::AbstractArray{T,2}, b::AbstractVector{T}) where {T<:Number}
    
     x[1] = b[1] / A[1,1]
     for k = 2:n
-        x[k] = (b[k] - vecdot(A[k,1:k-1], x[1:k-1])) / A[k,k]
+        x[k] = (b[k] - dot(A[k,1:k-1], x[1:k-1])) / A[k,k]
     end
     x
 end

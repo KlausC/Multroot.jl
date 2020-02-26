@@ -51,6 +51,8 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
     mx = n; wtol = tol; s0 = RZ; s = RZ; wthrh = thresh
 
     k = n;            # the degree of working polynomial
+    z = Complex{T}[]
+    l = Int64[]
     while k >= 1
         m = 1 # ensure this variable is used as loop index and value preserved after break
         if k == 1     # the polynomial is linear, GCD = 1
@@ -93,12 +95,12 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
             jj = 0
             for j = 1:m
                 tj = t[j]
-                tz, jj = findmin(abs.(z - tj))	# find root closest to tj
+                tz, jj = findmin(abs.(z .- tj))	# find root closest to tj
                 ljp = l[jj] + 1
                 l[jj] = ljp
-				        # z[jj] += (tj - z[jj]) / ljp # store mean value with weights l[jj] and 1
+				# z[jj] += (tj - z[jj]) / ljp # store mean value with weights l[jj] and 1
                 println("k = $k m = $m: z[$jj] = $(z[jj]), tz = $tz") 
-                tz <= 0.01 * abs(z[jj]) || error("inacceptable root, k = $k tz = $tz")
+                # tz <= 0.01 * abs(z[jj]) || error("inacceptable root, k = $k tz = $tz")
             end
             if m == 1
                 l[jj] += k - 1
@@ -170,4 +172,6 @@ function scalerows!(A::Array{Float64,2})
     scale!(s, A)
 	s
 end
+
+scale!(s, A) = lmul!(Diagonal(s), A)
 

@@ -35,7 +35,7 @@ function scalsq(A::AbstractArray{T,2}, b::AbstractVector{T}, w = nothing) where 
    
     # one step refinement
     bb = [b; zeros(T, n)]
-	B = [eye(T, m) A; A' zeros(T, n, n)]
+	B = [I A; A' zeros(T, n, n)]
     r = b - A * x
    
     #for j = 1:3

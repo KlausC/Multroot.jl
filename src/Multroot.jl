@@ -8,6 +8,7 @@ Using methods develped by Zhang et. al.
 module Multroot
 
 using Printf
+using LinearAlgebra
 
 export multroot, gcdroot, pejroot
 export sylves, sylves1, sylmat, cauchymt, scalsq

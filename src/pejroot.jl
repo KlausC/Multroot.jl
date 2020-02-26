@@ -29,7 +29,7 @@
 #
 # For more advanced usage:
 #
-#	» [z, e, c] = pejroot(f, y, l, noi, tol, style, prtsty)
+#	» [z, e, c] = pejroot(f, y, l; noi, tol, style, prtsty)
 #
 # The output 
 #          z --- (matrix) distinct roots (1st column) and corresponding
@@ -66,30 +66,30 @@
 #   1.00000000000000  20.00000000000000
 #
 """
-function pejroot(f::AbstractVector{T}, z0::PolyZeros{S}; noi::Int = 10, tol::U = 1e-8, style::Int = 2, prtsty::Int = 0) where {T<:Number,S<:Number,U<:AbstractFloat}
+function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10, tol::U = 1e-8, style::Int = 2, prtsty::Int = 0) where {T<:Number,S<:Number,U<:AbstractFloat}
 
-    CT = coeffstype(z0.z)
+    CT = coeffstype(z, mult)
     CT<:T || throw(ArgumentError("coefficient type $T not sufficient for $CT roots"))
     E = one(U)
     Z = zero(U)
 
-    m = length(z0.mult)	# number of variables (different roots)
-    n = sum(z0.mult)		# number of equations (degree of polynomial f)
+    m = length(mult)	# number of variables (different roots)
+    n = sum(mult)		# number of equations (degree of polynomial f)
    
-    length(f) == n+1 || throw(ArgumentError("Input error"))
+    length(f) == n+1 || throw(ArgumentError("degree of polynomial $(length(f)-1) does not match multiplicies $(n)"))
     f[1] != Z || throw(ArgumentError("polynomial has not full degree compared to its length"))
 
     f = f / f[1]		# make the polynomial monic
 
     # sort initial values to enhance accuracy
     # It is interesting, sorting really improves accuracy
-    jj = sortperm(abs.(z0.z), rev=true)	# greatest first
-    y0 = z0.z[jj]
-    l = z0.mult[jj]
+    jj = sortperm(abs.(z), rev=true)	# greatest first
+    y0 = z[jj]
+    ll = mult[jj]
 
-    job = 0						  # initialize job success return value
+    job = 0						# initialize job success return value
     y = copy(y0)				# pass the initial iterate
-    h = copy(f[2:n+1])	# make the RHS
+    h = copy(f[2:n+1])	        # make the RHS
     delta = zeros(U, 1, noi)	# space for sizes of the correction
     bcker = zeros(U, 1, noi)	# space for backward errors
 
@@ -103,22 +103,26 @@ function pejroot(f::AbstractVector{T}, z0::PolyZeros{S}; noi::Int = 10, tol::U =
        end
     end
 
-    if prtsty == 1 
-       println("     step   bcker         delta")
+    if prtsty >= 1 
+       println("  step   bckerr        delta")
     end
 
     Df = zeros(T, n ,m)			# open the space for Df
     bkerr = Z 
     pjcnd = Z
-    k = 0
+    kk = 0
 
     for k = 1:noi
+        kk = k
 
+        if prtsty >= 2
+            println(y)
+        end
+  
         # evaluate the coefficient operator and its Jacobian
-        z = PolyZeros(y, l)
-        b = polyG(z) - h
-        Df = polyDG(z)
-      
+        b = polyG(y, ll) - h
+        Df = polyDG(y, ll)
+
         if style == 2   # scale
             b = b .* w
             for j = 1:n
@@ -127,14 +131,19 @@ function pejroot(f::AbstractVector{T}, z0::PolyZeros{S}; noi::Int = 10, tol::U =
          end
 
          d = Df \ b							# least squares 
+
          delta[k] = norm(d, 2)
          bcker[k] = norm(b, Inf)
+
+         if prtsty >= 1 
+             @printf(" %2.0f    %10.2e    %10.2e\n", k, bcker[k], delta[k])
+         end
 
          if delta[k] < tol
             job = 1
          end     							# convergence criterion 1
          if k > 1 
-             if delta[k] > delta[k-1] && bcker[k] > bcker[k-1]
+             if delta[k] >= delta[k-1] && bcker[k] >= bcker[k-1]
                  if job == 1
                      bkerr = bcker[k-1]
                      # accept result of previous iteration
@@ -144,28 +153,20 @@ function pejroot(f::AbstractVector{T}, z0::PolyZeros{S}; noi::Int = 10, tol::U =
                  if delta[k]^2 / (delta[k-1] - delta[k]) < tol 
                      job = 1 
                  end
-             end
-         end
-      
-         y = y - d		# correct the roots
-
-         if prtsty >= 1		# intermediate show style 1
-             @printf(" %2.0f    %10.2e    %10.2e\n", k, bcker[k], delta[k])
-         end
-         if prtsty == 2	# intermediate show style 2
-             println(y)
-         end
-  
-          bkerr = bcker[k]
+            end
+        end
+       
+         y .-= d                            # correct the roots
+         bkerr = bcker[k]
       end # k-loop
 
       if job == 1
           s = svd(Df)
-          pjcnd = 1 / s[2][m]  # get pej. cond. number
-          jj = sortperm(l)
+          pjcnd = 1 / s.S[m]  # get pej. cond. number
+          jj = sortperm(ll)
           y = y[jj]
-          l = l[jj]   # sort by multiplicities
+          ll = ll[jj]   # sort by multiplicities
       end
 
-      PolyZeros(y, l), bkerr, pjcnd, job, k
+      PolyZeros(y, ll), bkerr, pjcnd, job, kk
 end

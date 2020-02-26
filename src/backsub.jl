@@ -12,7 +12,7 @@ function backsub(A::AbstractArray{T,2}, b::AbstractVector{T}) where {T<:Number}
     for k = (n-1):-1:1
         akk = A[k,k]
         if akk == N akk = s; A[k,k] = s end
-        x[k] = (b[k] - vecdot(A[k,k+1:n], x[k+1:n])) / akk 
+        x[k] = (b[k] - dot(A[k,k+1:n], x[k+1:n])) / akk 
     end
     x
 end

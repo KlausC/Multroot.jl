@@ -62,6 +62,6 @@ Extract result polynomials u and v if x is a solution of sylves2(f,g) * x == 0.
 function extract_sylves2(x::AbstractVector{T}) where {T<:Number}
   k = length(x)
   k > 2 && k % 2 == 1 || error("vector too short or not odd length")
-  x[1:2:k] / x[1], x[2:2:end] / x[2]  # u, v
+  x[1:2:k] / x[1], x[2:2:k] / x[2]  # u, v
 end
 

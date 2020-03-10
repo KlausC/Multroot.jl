@@ -4,11 +4,5 @@ function forsub(A::AbstractArray{T,2}, b::AbstractVector{T}) where {T<:Number}
 # forsub performs forward substitution to solve Ax=b
 #
     n = size(A,1)
-    x = zeros(T, n)
-   
-    x[1] = b[1] / A[1,1]
-    for k = 2:n
-        x[k] = (b[k] - dot(A[k,1:k-1], x[1:k-1])) / A[k,k]
-    end
-    x
+    LowerTriangular(A) \ b[1:n]
 end

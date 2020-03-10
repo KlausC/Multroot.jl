@@ -46,7 +46,7 @@ function gcdgn(p::AbstractVector{T}, q::AbstractVector{T}, g0::AbstractVector{T}
         end   
     end
    
-    bke0 = norm(b .* w) 
+    bke0 = norm(b .* w, Inf) 
     bke = bke0 
     #@printf("      g-n %g \n", bke)
 	g::AbstractVector{T} = []
@@ -70,7 +70,7 @@ function gcdgn(p::AbstractVector{T}, q::AbstractVector{T}, g0::AbstractVector{T}
             s = conv(g, u) - p
 		    t = conv(g, v) - q
             b = [s[2:lp]; t[2:lq]]
-		    bkej = norm(b .* w) 
+		    bkej = norm(b .* w, Inf) 
             tau *= 0.5
 		end
         #@printf("      g-n %g %g %g \n", bkej, tau, norm(d))

@@ -45,13 +45,13 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
     p = p / p[1]
     q = deriv(p) / n #  q(x) = p'(x) / degree(p)
 
-    f = float(p); g = float(q)	# working copies of the polynomials 
-    nf = maximum(abs, f)	 			# the largest coefficient
+    f = float(p); g = float(q)  # working copies of the polynomials 
+    nf = maximum(abs, f)        # the largest coefficient
 
     mx = n; wtol = tol; s0 = RZ; s = RZ; wthrh = thresh
 
     k = n;            # the degree of working polynomial
-    z = Complex{T}[]
+    z = complex(T)[]
     l = Int64[]
     while k >= 1
         m = 1 # ensure this variable is used as loop index and value preserved after break
@@ -61,12 +61,14 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
             for mm = 1:k
                 m = mm
                 A = sylves(f, g, m)
-                scalerows!(A)
+                # scalerows!(A)
                 s0 = s  # save previous sigma
-            
+
                 s, x = zminsv(A, tol)
-                # @printf("s. value %g,%g,%g\n", m, k, s)
-                
+                #@printf("s. value %g,%g,%g\n", m, k, s)
+                if x[1] == 0
+                    x[1] = eps()
+                end
                 # I don't understand why s is compared to nf.
                 if s < wthrh * nf || m == mx || s < drop * s0
                     h, u, v, res0, res, sm = gcd_refinement(x, m, f, g, A)
@@ -98,8 +100,8 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
                 tz, jj = findmin(abs.(z .- tj))	# find root closest to tj
                 ljp = l[jj] + 1
                 l[jj] = ljp
-				# z[jj] += (tj - z[jj]) / ljp # store mean value with weights l[jj] and 1
-                println("k = $k m = $m: z[$jj] = $(z[jj]), tz = $tz") 
+                # z[jj] += (tj - z[jj]) / ljp # store mean value with weights l[jj] and 1
+                println("k = $k m = $m: z[$jj] = $(z[jj]), tz = $tz")
                 # tz <= 0.01 * abs(z[jj]) || error("inacceptable root, k = $k tz = $tz")
             end
             if m == 1
@@ -129,12 +131,13 @@ function finish(z, l, p)
     end
     # println("f = $(size(f)) p = $(size(p)) w = $(size(w))")
     bkerr = maximum(abs, (f - p) .* w)
-   
+
     PolyZeros(z, l), bkerr
 end
 
 function gcd_refinement(x, m, f, g, A)
     u0, v0 = extract_sylves(x)
+    #println("after extract_sylves: x = $x\nu0 = $u0\nv0 = $v0")
     #println("refinement u0: $(norm(conv(u0,g) + conv(v0,f))/norm(f))")
     B = cauchymt(u0, length(f) - length(u0) + 1)
     g0 = scalsq(B, f)	# scaled least squares solver g0 = div(f, u0)
@@ -167,10 +170,10 @@ function analysis_sv(k, m, A, x, s)
 
 end
 
-function scalerows!(A::Array{Float64,2})
-	s = map(i->2.0^-exponent(norm(A[i,:])), 1:size(A,1))
+function scalerows!(A::Array{<:Number,2})
+    s = map(i->2.0^-exponent(norm(A[i,:])), 1:size(A,1))
     scale!(s, A)
-	s
+    s
 end
 
 scale!(s, A) = lmul!(Diagonal(s), A)

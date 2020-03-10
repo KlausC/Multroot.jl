@@ -5,10 +5,8 @@ function cauchymt(f::AbstractVector{T}, k::Int) where T
     n = length(f)
     m = n + k - 1
     A = zeros(T, m, k)
-   
     for j = 1:k
         A[j:j+n-1,j] = f
     end
     A
 end
-   

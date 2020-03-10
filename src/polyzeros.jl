@@ -1,4 +1,7 @@
 
+export PolyZeros
+import Polynomials: roots, degree
+
 # PolyZeros represents a set of distinct (potential) roots z[j] of a polynomial
 # The z-values are ordered by absolute value to obtain better numeric stability
 # when calculating products of the form  Prod over j (x-z[j]) ^mult[j]
@@ -19,9 +22,11 @@ function PolyZeros(zz::AbstractVector{S}, ll::AbstractVector{Int} = Int[]) where
     end
     zz, ll = filter_duplicates(zz, ll)
     m = length(zz)
+    #=
     jj = sortperm(zz, lt = lessabs)
     zz = zz[jj]
     ll = ll[jj]
+    =#
     CT = coeffstype(zz, ll)
     creal = CT <: Real
     ind = BitArray(zeros(Bool,2m))
@@ -29,7 +34,14 @@ function PolyZeros(zz::AbstractVector{S}, ll::AbstractVector{Int} = Int[]) where
     PolyZeros(zz, ll, creal, ind)
 end
 
-import Polynomials: roots, degree
+function PolyZeros(A::AbstractMatrix{T}) where T
+    m, n = size(A)
+    n == 2 || throw(ArgumentError("need exactly 2 colums"))
+    zz = A[:,1]
+    ll = Int.(A[:,2])
+    PolyZeros(zz, ll)
+end
+
 Base.isreal(z::PolyZeros) = z.real_coefficients
 multiplicities(z::PolyZeros) = z.mult
 roots(z::PolyZeros) = z.z

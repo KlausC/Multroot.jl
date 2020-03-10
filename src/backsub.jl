@@ -5,15 +5,12 @@ function backsub(A::AbstractArray{T,2}, b::AbstractVector{T}) where {T<:Number}
 #
     n = size(A,1)
     N = zero(T)
-    s = maximum(abs, diag(A)) * eps(T)
-    x = zeros(T, n)
-   	if A[n,n] == N A[n,n] = s end
-    x[n] = b[n] / A[n,n]
-    for k = (n-1):-1:1
-        akk = A[k,k]
-        if akk == N akk = s; A[k,k] = s end
-        x[k] = (b[k] - dot(A[k,k+1:n], x[k+1:n])) / akk 
+    s = maximum(abs, diag(A)) * eps(real(T))
+    for k = 1:n
+        if iszero(A[k,k])
+            A[k,k] = s
+        end
     end
-    x
+    UpperTriangular(A) \ b[1:n]
 end
 

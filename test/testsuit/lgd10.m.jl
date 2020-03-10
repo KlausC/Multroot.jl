@@ -13,21 +13,7 @@ function lgd10()
    0.43339539412925
   -0.43339539412925
    0.14887433898163
-  -0.14887433898163];
-    z = [z,ones(10,1)];
-    @printf("\n");
-   if norm(imag(z(:,1))) == 0 
-        @printf("                 roots         multiplicities\n");
-        @printf("\n");
-        @printf("%25.14f \t \t \t %3g \n", z');
-   else
-        @printf("                 roots ")
-        @printf("   \t\t\t\t\t\t     multiplicities\n");
-        @printf("\n");
-        @printf("%22.15f + %22.15f i \t \t %3g \n",             [real(z(:,1)),imag(z(:,1)),z(:,2)]');
-   end;       
-
-    
-      
-    p,z
+  -0.14887433898163]
+    z = [z ones(10)]
+    p, PolyZeros(z)
 end

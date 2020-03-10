@@ -1,3 +1,4 @@
+#! /usr/bin/sh
 dos2unix |
 awk '
 BEGIN { Q = "'"'"'"

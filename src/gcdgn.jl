@@ -3,7 +3,7 @@ function gcdgn(p::AbstractVector{T}, q::AbstractVector{T}, g0::AbstractVector{T}
 #  Finds extended GCD of polynomial p and q by Gauss-Newton
 #  iteration, such that
 #
-#         conv(g,u) = p,      conv(g,v) = q
+#         convolute(g,u) = p,      convolute(g,v) = q
 #   
 #  Calling syntax:
 #    g,u,v,res = gcdgn(p, q, g0, u0, v0)
@@ -27,8 +27,8 @@ function gcdgn(p::AbstractVector{T}, q::AbstractVector{T}, g0::AbstractVector{T}
     u0 = u0 / u0[1]
     v0 = v0 / v0[1]
     
-    s = conv(g0, u0) - p
-    t = conv(g0, v0) - q
+    s = convolute(g0, u0) - p
+    t = convolute(g0, v0) - q
     b = [s[2:lp]; t[2:lq]]   
     x = [g0[2:m1]; u0[2:n1]; v0[2:k1]]
     w = ones(T, length(b))
@@ -67,8 +67,8 @@ function gcdgn(p::AbstractVector{T}, q::AbstractVector{T}, g0::AbstractVector{T}
             g = [E; y[1:m]]
 	        u = [E; y[m+1:m+n]]
             v = [E; y[m+n+1:m+n+k]]
-            s = conv(g, u) - p
-		    t = conv(g, v) - q
+            s = convolute(g, u) - p
+		    t = convolute(g, v) - q
             b = [s[2:lp]; t[2:lq]]
 		    bkej = norm(b .* w, Inf) 
             tau *= 0.5
@@ -91,17 +91,3 @@ function gcdgn(p::AbstractVector{T}, q::AbstractVector{T}, g0::AbstractVector{T}
     end
     g, u, v, bke0, bke
 end 
-
-function conv(p::Vector{T}, q::Vector{S}) where {S,T}
-    R = promote_type(S, T)
-    n = length(p)
-    m = length(q)
-    a = zeros(R, m + n - 1)
-    for i = 1:n
-        for j = 1:m
-            a[i+j-1] += p[i] * q[j]
-        end
-    end
-    a
-end
-

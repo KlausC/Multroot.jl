@@ -31,28 +31,28 @@ global const extract_sylves = extract_sylves2
 """
 function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:AbstractFloat}
     gamma = S(100)		# residual growth factor, default = 100
-    delta = S(100)	  # threshold growth factor, default = 100
+    delta = S(100)	    # threshold growth factor, default = 100
     thresh = tol*100	# zero singular threshold, default = 100*tol
     drop = S(5.0e-5)	# try Gauß-Newton if sigma(k) < drop * sigma(k-1)
 
     E = one(T); RE = real(E); Z = zero(T); RZ = real(Z)
 
+    a = findfirst(!iszero, p)
+    a !== nothing || throw(ArgumentError("gcdroot of zero polynomial not allowed"))
     # make the polynomial monic
-    if p[1] == Z
-        p = p[findfirst(p):end]
-    end
-    n = length(p) - 1
-    p = p / p[1]
-    q = deriv(p) / n #  q(x) = p'(x) / degree(p)
-
-    f = float(p); g = float(q)  # working copies of the polynomials 
-    nf = maximum(abs, f)        # the largest coefficient
+    k = length(p)
+    n = k - a
+    p = f = view(p, a:k) / p[a] # working copy of the monic polynomial 
+    g = deriv(f) / n            #  g(x) = f'(x) / degree(f)
+    nf = norm(f, Inf)           # the largest coefficient
 
     mx = n; wtol = tol; s0 = RZ; s = RZ; wthrh = thresh
 
-    k = n;            # the degree of working polynomial
-    z = complex(T)[]
-    l = Int64[]
+    z = complex(T)[]        # all different roots
+    l = Int64[]             # the multiplicities of those roots as known so far
+    nroots = 0              # invariant: length(z) == length(l) == nroots
+
+    k = n;                  # the degree of working polynomial
     while k >= 1
         m = 1 # ensure this variable is used as loop index and value preserved after break
         if k == 1     # the polynomial is linear, GCD = 1
@@ -61,20 +61,23 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
             for mm = 1:k
                 m = mm
                 A = sylves(f, g, m)
-                # scalerows!(A)
                 s0 = s  # save previous sigma
-
+                
                 s, x = zminsv(A, tol)
+                if m > 1 && s > s0
+                    break
+                end
                 #@printf("s. value %g,%g,%g\n", m, k, s)
                 if x[1] == 0
                     x[1] = eps()
                 end
                 # I don't understand why s is compared to nf.
                 if s < wthrh * nf || m == mx || s < drop * s0
+                    # h = gcd(f, g); u = f / h; v = g / h
                     h, u, v, res0, res, sm = gcd_refinement(x, m, f, g, A)
                     if res < wtol || m == mx
-                        wtol = max(wtol, res * gamma)	# increase tolerance by factor 
-                        wthrh = max(wthrh, (s / nf) * delta)	# increase threshold by factor
+                        wtol = max(wtol, res * gamma)	     # increase tolerance by factor 
+                        wthrh = max(wthrh, (s / nf) * delta) # increase threshold by factor
                         break # for mm
                     end
                 end
@@ -85,7 +88,8 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
             z = roots(u)	# u has only simple roots
             # assert length(z) == m
             length(z) == m || error("number of roots of u $(length(z)) is not $m")
-            l = ones(Int64, m) 
+            nroots = m
+            l = ones(Int64, nroots) 
             if m == 1
                 # only one root value with multiplicity n
                 l[1] = k
@@ -95,14 +99,15 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
         else
             t = roots(u)	# u has only simple roots - they should be in z
             jj = 0
+            ix = Vector(1:nroots)
             for j = 1:m
                 tj = t[j]
-                tz, jj = findmin(abs.(z .- tj))	# find root closest to tj
-                ljp = l[jj] + 1
-                l[jj] = ljp
-                # z[jj] += (tj - z[jj]) / ljp # store mean value with weights l[jj] and 1
-                println("k = $k m = $m: z[$jj] = $(z[jj]), tz = $tz")
-                # tz <= 0.01 * abs(z[jj]) || error("inacceptable root, k = $k tz = $tz")
+                tz, jm = findmin(abs.(z[ix] .- tj))	# find root closest to tj
+                jj = ix[jm]
+                deleteat!(ix, jm)
+                l[jj] += 1                     # increase multiplicity of that root
+                # println("k = $k m = $m: z[$jj] = $(z[jj]) ~ $tj tz = $tz")
+                tz <= 0.1 * (abs(z[jj])+0.01) || error("inacceptable root, k = $k tz = $tz")
             end
             if m == 1
                 l[jj] += k - 1
@@ -113,46 +118,43 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
         if k <= 0
             return finish(z, l, p)
         end
-        f = h
+        f = h               # f = gcd(f, f') -- all positive multiplicities decreased by 1 
         g = deriv(f) / k
-        nf = norm(f)
+        nf = norm(f, Inf)
         mx = m
     end # k-while loop
 end
 
 function finish(z, l, p)
     f = polymult(z, l)
-    w = ones(eltype(p), length(p))
-    for j = 1:length(p)
-        apj = abs(p[j])
-        if apj > 1.0
-            w[j] = 1.0 / apj
-        end
-    end
+    w = [ max(abs(pj), 1) for pj in p]
     # println("f = $(size(f)) p = $(size(p)) w = $(size(w))")
-    bkerr = maximum(abs, (f - p) .* w)
+    bkerr = maximum(abs, (f - p) ./ w)
+
+    # println("finish: bkerr = $bkerr")
+    # display([f p (f-p) ./ w])
 
     PolyZeros(z, l), bkerr
 end
 
 function gcd_refinement(x, m, f, g, A)
     u0, v0 = extract_sylves(x)
-    #println("after extract_sylves: x = $x\nu0 = $u0\nv0 = $v0")
-    #println("refinement u0: $(norm(conv(u0,g) + conv(v0,f))/norm(f))")
+    # println("after extract_sylves: x = $x\nu0 = $u0\nv0 = $v0")
+    # println("refinement u0: $(norm(convolute(u0,g) - convolute(v0,f))/norm(f))")
     B = cauchymt(u0, length(f) - length(u0) + 1)
     g0 = scalsq(B, f)	# scaled least squares solver g0 = div(f, u0)
     g0 = g0 / g0[1]		# first approximation of gcd(p, p')
-    #printresidue("g0", g0, u0, v0, f, g)
+    # printresidue("g0", g0, u0, v0, f, g)
     h, u, v, res0, res = gcdgn(f, g, g0, u0, v0)	# refinement of g, u, v by G-N
-    #println("refinement u: $(norm(conv(u,g) - conv(v,f))/norm(f))")
-    #printresidue("h ", h, u, v, f, g)
+    # println("refinement u:  $(norm(convolute(u,g) - convolute(v,f))/norm(f))")
+    # printresidue("h ", h, u, v, f, g)
     sm = norm(A * [u; v]) / norm([u;v])
     h, u, v, res0, res, sm
 end
 
 function printresidue(text, g0, u0, v0, f, g)
-    uuu = conv(g0, u0) - f	# should be zero
-    vvv = conv(g0, v0) - g	# should be zero
+    uuu = convolute(g0, u0) - f	# should be zero
+    vvv = convolute(g0, v0) - g	# should be zero
 
     # println("$text p(x)  $f")
     # println("$text p'(x)  $g")

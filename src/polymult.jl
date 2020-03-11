@@ -99,66 +99,147 @@ Calculate coefficients of polynomial given by its roots with multiplicities.
 The z should be ordered by increasing absolute value for better accuracy. 
 """
 function products(z::AbstractVector{T}, ll::AbstractVector{Int}) where T <:Number
-  m = length(z)
-  m == length(ll) || throw(ArgumentError("root vector and muliplicities have differnet length"))
-  all(ll .>= 0) || throw(ArgumentError("multiplicities must not be negative"))
-  n = sum(ll)
-  S = coeffstype(z, ll)
-  r = zeros(S, n+1)
-  r[1] = one(S)
-  Z = zero(S)
-  ix = 1
-  if !((S<:Real) && !(T<:Real))
-    for k = 1:m
-      zk = -z[k]
-      ix = product1!(ix, r, ll[k], zk)
-    end
-  else # T is not real, but coefficient type is real
-    for k = 1:m
-      zk = -z[k]
-      zi = imag(zk)
-      zk = real(zk)
-      if zi == Z
-        ix = product1!(ix, r, ll[k], zk)
-      elseif zi > Z
-        zk = 2zk
-        zi = abs2(z[k])
-        ix = product2!(ix, r, ll[k], zk, zi)
-      end
-    end
-  end
-  r
+    m = length(z)
+    m == length(ll) || throw(ArgumentError("root vector and muliplicities have differnet length"))
+    all(ll .>= 0) || throw(ArgumentError("multiplicities must not be negative"))
+    n = sum(ll)
+    S = coeffstype(z, ll)
+    r = zeros(S, n+1)
+    r[1] = 1
+    Z = zero(S)
+    ix = 1
+    jj = sortperm(z, by=abs2, rev=false)
+    z = view(z, jj)
+    ll =  ll[jj]
+        while sum(ll) > 0
+            p = minpos(ll)
+            jm = findall(x-> x >= p, ll)
+            s = singprod(z[jm], S)
+            s = power(s, p)
+            ix = convolute!(ix, r, s)
+            ll .-= p
+        end
+    r
 end
 
 """
-multiply by (x + p1)^l. ix is the current used size of r.
+    singprod(z::Vector, S::Type))
+
+Return coefficients of polynomial `prod((x - zz) for zz in z)`
+
 """
-function product1!(ix::Int, r::AbstractVector{S}, ll::Int, zk::T) where {S<:Number,T<:Number}
-  for j = 1:ll
-    for i = ix:-1:1
-      r[i+1] = muladd(r[i], zk, r[i+1])
+function singprod(z::AbstractVector{T}, ::Type{S}) where {T<:Number,S<:Number}
+    m = length(z)
+    r = Vector{S}(undef, m+1)
+    r[1] = 1
+    ix = 1
+    if S<:Real && T<:Complex
+        for k = 1:m
+            zk = z[k]
+            rr = -real(zk)
+            ri = imag(zk)
+            if iszero(ri) 
+                ix = product1!(ix, r, 1, rr)
+            elseif ri > 0
+                ix = product2!(ix, r, 1, 2*rr, abs2(zk))
+            end
+        end
+    else # T is complex, but coefficient type is real
+        for k = 1:m
+            ix = product1!(ix, r, 1, -z[k])
+        end
     end
-    ix += 1
-  end
-  ix  
+    r
 end
 
+"""
+    minpos(v::Vector{<:Integer})
+
+Return the minimal positive integer in v
+"""
+function minpos(x::AbstractVector{T}) where T<:Integer
+    y = typemax(T)
+    minimum(x .+ y) - y
+end
 
 """
+    convolute!(ix, r, p)
+
+If `r` is a vector representing a polynomial in `r[1:ix]` and p is a vector
+containing another polynomial, modify `r` to contain the product.
+Assume `ix >= 0` and `length(r) >= ix + length(p) - 1`.
+"""
+function convolute!(ix::Integer, r::AbstractVector, p::AbstractVector)
+    ix <= 0 && return ix
+    n = length(p) - 1
+    ri = r[ix]
+    for j = 0:n
+        r[ix+j] = ri * p[j+1]
+    end
+    for i = ix-1:-1:1
+        ri = r[i]
+        for j = n:-1:1
+            r[i+j] += ri * p[j+1]
+        end
+        r[i] = ri * p[1]
+    end
+    ix + n
+end
+
+"""
+    convolute(p, q)
+
+Return the convolution (polynomial product) of vectors p and q.
+The coefficient order does not matter. No checks for zero coefficients.
+"""
+function convolute(p::AbstractVector{T}, q::AbstractVector{S}) where {T,S}
+    R = promote_type(T,S)
+    m = length(p)
+    n = length(q)
+    (n == 0 || m == 0) && return R[]
+    r = similar(p, R, n + m - 1)
+    copyto!(r, p)
+    convolute!(m, r, q)
+    r
+end
+
+"""
+    product1!(ix, r, ll, p1)
+
+multiply by (x + p1)^ll. ix is the current used size of r.
+"""
+function product1!(ix::Int, r::AbstractVector{T}, ll::Int, zk::T) where T<:Number
+    for j = 1:ll
+        r[ix+1] = r[ix] * zk
+        for i = ix:-1:2
+            r[i] = muladd(r[i-1], zk, r[i])
+        end
+        ix += 1
+    end
+    ix  
+end
+
+"""
+    product2!(ix, r, ll, p1, p2)
+
 multiply by (x^2 + p1*x + p2)^ll. ix is the current used size of r.
 """
-function product2!(ix::Int, r::AbstractVector{S}, ll::Int, p1::T, p2::T) where {S<:Number,T<:Number}
-  for j = 1:ll
-    for i = ix:-1:1
-      rr = muladd(r[i+1], p1, r[i+2])
-      r[i+2] = muladd(r[i], p2, rr)
+function product2!(ix::Int, r::AbstractVector{T}, ll::Int, p1::T, p2::T) where T<:Number
+    for j = 1:ll
+        r[ix+1] = r[ix+2] = 0  
+        for i = ix:-1:1
+            rr = muladd(r[i+1], p1, r[i+2])
+            r[i+2] = muladd(r[i], p2, rr)
+        end
+        r[2] = muladd(r[1], p1, r[2])
+        ix += 2
     end
-    r[2] = muladd(r[1], p1, r[2])
-    ix += 2
-  end
-  ix
+    ix
 end
 
+function power(p::AbstractArray, n::Integer)
+    (Poly(p)^n).a
+end
 
 function Polynomials.roots(pc::AbstractVector{T}) where T<:Number
 # redirect to implementation in Polynomials

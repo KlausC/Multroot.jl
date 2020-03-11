@@ -31,46 +31,32 @@ function multroot(p::AbstractVector{T}; tol::S = 1e-10, scaling::Bool=false) whe
     #
     # clear leading/trailing zeros
     #
-    n = length(p)
-    n == 0 && throw(ArgumentError("zero polynomial has no roots"))
+    jj = findall(!iszero, p) 
+    isempty(jj) && throw(ArgumentError("zero polynomial has no roots"))
 	Z = zero(T)
 	E = one(T)
-    if p[1] == Z || p[n] == Z 
-        jj = findall(!iszero, p) 
-        isempty(jj) && throw(ArgumentError("zero polynomial has no roots"))
-        j1 = minimum(jj)
-	    j2 = maximum(jj)
-        q = p[j1:j2]
-    else
-        j2 = n;
-        q = p
+    n = length(p)
+    j1, j2 = extrema(jj)
+    q = p[j1:j2]
+    if j1 >= j2
+        return PolyZeros(T[], Int[]), Z, 0
     end
-    q = q / q[1]
-    #
-    # scaling
-    #
-    m = length(q) - 1
-    if m > 0 && scaling
-        c = E / (abs(q[m+1])) ^ (1/m)
-        # println("c = $c, m = $m, q = $q")
-   	    q = q .* (c .^ (0:m))
-    else
-        c = E
-    end
-println("before gcdroot")
-	z0, bke = gcdroot(q, tol)
-  
-    println(z0)
 
-    if bke < S(1.0e-2)
+    scale = scale!(q, scaling)
+	z0, bke = gcdroot(q, tol)
+
+    if bke < S(1.0e200)
 println("before pjeroot")
+
         z1, bkerr, pjcnd, job = pejroot(q, z0.z, z0.mult)
-        z1.z ./= c
+        
+        # z1, bkerr, pcjnd, job = z0, bke, Z, 1
+        z1.z .*= scale
         z = z1.z
         l = z1.mult
         if j2 < n
             push!(z1.z,  Z)
-            append!(z1.mult, zeros(Int, n-j2))
+            push!(z1.mult, n-j2)
         end
         if job == 1
             #
@@ -81,19 +67,19 @@ println("before pjeroot")
             @printf("    !!!THE COMPUTATION IS SUCCESSFUL!!!\n")
             @printf("\n")
             @printf("THE PEJORATIVE CONDITION NUMBER:       %g \n", pjcnd)
-            @printf("THE BACKWARD ERROR:                    %6.2e \n", bkerr)
+            @printf("THE BACKWARD ERROR:                    %6.2e %6.2e \n", bkerr, bke)
             @printf("THE ESTIMATED FORWARD ROOT ERROR:      %6.2e \n", 2 * bkerr * pjcnd)
             @printf("\n");
             if norm(imag(z)) == Z 
                 @printf("        computed roots         multiplicities\n")
                 @printf("\n")
-				for j = 1:nz @printf("%25.15f \t \t \t %3g \n", z[j], l[j]) end
+				for j = 1:nz @printf("%25.15f \t \t \t %3d \n", z[j], l[j]) end
             else
-                @printf("        computed roots ")
-                @printf("   \t\t\t\t\t\t     multiplicities\n");
+                @printf("                  computed roots ")
+                @printf("                 multiplicities\n");
                 @printf("\n");
                 for j = 1:nz
-				    @printf("%22.15f + %22.15f i \t \t %3g \n", real(z[j]), imag(z[j]), l[j])
+				    @printf("%22.15f + %22.15f i \t %3d \n", real(z[j]), imag(z[j]), l[j])
 				end
             end
         else
@@ -110,3 +96,25 @@ println("before pjeroot")
     z1, bkerr, pjcnd, job
 end
 
+function scale!(p::Vector, scaling::Bool)
+    n = length(p) - 1
+    a = p[1]
+    c = p[1]
+    p ./= a
+    if scaling
+        b = p[n+1]
+        p[n÷2+2:n+1] ./= b
+        c = b ^ (1 / n)
+        cc = c
+        for k = 2:(n+1)÷2
+            p[k] /= cc
+            p[n+2-k] *= cc
+            cc *= c
+        end
+        if iseven(n)
+            p[n÷2+1] /= cc
+        end
+        p[n+1] = 1
+    end
+    c
+end

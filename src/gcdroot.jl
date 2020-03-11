@@ -83,7 +83,7 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
                 end
             end # for mm
         end
-        # println("after m-loop: m = $m mx=$mx k=$k n=$n s=$s thr=$(wthrh*nf) drop=$(drop*s0) ")
+        println("after m-loop: m = $m mx=$mx k=$k n=$n s=$s thr=$(wthrh*nf) drop=$(drop*s0) ")
         if k == n			# the root values of u contain all roots of f 
             z = roots(u)	# u has only simple roots
             # assert length(z) == m
@@ -106,7 +106,7 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
                 jj = ix[jm]
                 deleteat!(ix, jm)
                 l[jj] += 1                     # increase multiplicity of that root
-                # println("k = $k m = $m: z[$jj] = $(z[jj]) ~ $tj tz = $tz")
+                println("k = $k m = $m: z[$jj] = $(z[jj]) ~ $tj tz = $tz")
                 tz <= 0.1 * (abs(z[jj])+0.01) || error("inacceptable root, k = $k tz = $tz")
             end
             if m == 1
@@ -131,8 +131,8 @@ function finish(z, l, p)
     # println("f = $(size(f)) p = $(size(p)) w = $(size(w))")
     bkerr = maximum(abs, (f - p) ./ w)
 
-    # println("finish: bkerr = $bkerr")
-    # display([f p (f-p) ./ w])
+    println("finish: bkerr = $bkerr")
+    display([f p (f-p) ./ w])
 
     PolyZeros(z, l), bkerr
 end

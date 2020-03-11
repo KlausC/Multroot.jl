@@ -117,7 +117,7 @@ function products(z::AbstractVector{T}, ll::AbstractVector{Int}) where T <:Numbe
             s = singprod(z[jm], S)
             s = power(s, p)
             ix = convolute!(ix, r, s)
-            ll .-= p
+            ll[jm] .-= p
         end
     r
 end

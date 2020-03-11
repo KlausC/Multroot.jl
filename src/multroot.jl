@@ -102,7 +102,7 @@ function scale!(p::Vector, scaling::Bool)
     c = p[1]
     p ./= a
     if scaling
-        b = p[n+1]
+        b = abs(p[n+1])
         p[n÷2+2:n+1] ./= b
         c = b ^ (1 / n)
         cc = c
@@ -114,7 +114,6 @@ function scale!(p::Vector, scaling::Bool)
         if iseven(n)
             p[n÷2+1] /= cc
         end
-        p[n+1] = 1
     end
     c
 end

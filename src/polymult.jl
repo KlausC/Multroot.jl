@@ -27,7 +27,7 @@ function polyG(z, mult)
 end
 
 # The derivative of G at point z
-function polyDG(zz::AbstractVector{S}, ll) where S
+function polyDG(zz::AbstractVector{S}, ll) where S<:Number
     m = length(zz)
     s = products(zz, ll .- 1)
     n0 = length(s)
@@ -45,6 +45,49 @@ function polyDG(zz::AbstractVector{S}, ll) where S
         Df[1:n,j] .*= -ll[j]
     end
     isreal(Df) ? real(Df) : Df
+end
+
+function polyDG(zz::AbstractVector{S}, ll, p::AbstractArray{T}) where {S<:Number,T<:Number}
+    w = [1 ./ max(abs(pp), 1) for pp in p]
+    m = length(zz)
+    n = sum(ll)
+    Df = zeros(T, n, m)
+    k = 0
+    for j = 1:m
+        q, r = adiv(p, -zz[j], w)
+        zi = imag(zz[j])
+        if S<:Real || T<:Complex
+            Df[:,k+=1] .= q
+        else
+            if zi >= 0 # also T <: Real && S<:Complex
+                Df[:,k+=1] .= real(q)
+                if zi > 0
+                    Df[:,k+=1] .= imag(q)
+                end
+            end
+        end
+    end
+    Df
+end
+
+function realtocoeff(z::AbstractVector{<:Real}, zz::AbstractVector{S}) where S<:Complex
+    r = similar(z, S)
+    k = 0
+    for j = 1:length(z)
+        zzi = imag(zz[j])
+        if zzi == 0
+            k += 1
+            r[k] = z[k]
+        elseif zzi > 0
+            rk = z[k+1]/2 - im*z[k+2]/2
+            r[k+=1] = rk
+            r[k+=1] = conj(rk)
+        end
+    end
+    r
+end
+function realtocoeff(z::AbstractVector, zz::AbstractVector)
+    z
 end
 
 """
@@ -235,6 +278,47 @@ function product2!(ix::Int, r::AbstractVector{T}, ll::Int, p1::T, p2::T) where T
         ix += 2
     end
     ix
+end
+
+"""
+    adiv(c::Vector, a::Number, weight::Vector) -> b::Vector
+
+Divide Polynomial `x^n * c[1] + ... + c[n+1]` by `x + a` giving
+`x^(n-1) * b[1] + ... + b[n]` under the condition that the division remainder is zero.
+
+`weight` is a positive weight vector with the same size as `c` used to solve the
+least squares problem `minimize norm(w .* (A * b - c)) where `A` is the `n+1 x n`
+Cauchy matrix describing the multiplication with `x + a`.
+The results tend to be much more accurate than that of the usual long division,
+especially in the case of hughe coefficients, which are damped by `weight = 1 ./ abs.(c)`.
+"""
+function adiv(c::AbstractVector{<:Number}, a::S, w::AbstractVector{<:Real}) where S<:Number
+    T = real(S)
+    n = length(c) - 1
+    aa2 = abs2(a)
+    aa = sqrt(aa2)
+    ac = conj(a)
+    r = Vector{T}(undef, n)
+    d = Vector{T}(undef, n)
+    b = Vector{S}(undef, n)
+    w1 = w[1]
+    u1 = c[1] * w1
+    for i = 1:n
+        w2 = w[i+1]
+        u2 = c[i+1] * w2
+        z = d[i] = hypot(w1, w2*aa)
+        w1z = w1 / z
+        w2z = w2 / z
+        r[i] = w2z * w2
+        b[i] = w1z * u1 + w2z * u2 * ac
+        u1 = -w2z * u1 * a + w1z * u2
+        w1 *= w2z
+    end
+    bi = b[n] = b[n] / d[n]
+    for i = n-1:-1:1
+        bi = b[i] = (b[i] - bi * r[i] * ac) / d[i]
+    end
+    b, u1
 end
 
 function power(p::AbstractArray, n::Integer)

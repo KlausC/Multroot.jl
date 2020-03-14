@@ -22,8 +22,11 @@ end
 # Calculate the coefficient operator of the pejorative manifold
 # PolyRoots is used to leverage calculation of (x-z[j]) - products
 #
-function polyG(z, mult)
-    products(z, mult)[2:end]
+function polyG(z::AbstractVector{<:Number}, mult::AbstractVector{<:Integer})
+    polyG(products(z, mult))
+end
+function polyG(p::AbstractArray{<:Number})
+    p[2:end]
 end
 
 # The derivative of G at point z
@@ -47,46 +50,45 @@ function polyDG(zz::AbstractVector{S}, ll) where S<:Number
     isreal(Df) ? real(Df) : Df
 end
 
-function polyDG(zz::AbstractVector{S}, ll, p::AbstractArray{T}) where {S<:Number,T<:Number}
-    w = [1 ./ max(abs(pp), 1) for pp in p]
+function polyDG(zz::AbstractVector{S}, ll::AbstractVector{<:Integer}, p::AbstractArray{T}, zs::AbstractVector{<:Integer}) where {S<:Number,T<:Number}
+
+    w = [1/max(pp, 1) for pp in p]
     m = length(zz)
     n = sum(ll)
     Df = zeros(T, n, m)
-    k = 0
     for j = 1:m
+        zsj = zs[j]
+        zsj <= 0 || zsj > j || continue
         q, r = adiv(p, -zz[j], w)
-        zi = imag(zz[j])
-        if S<:Real || T<:Complex
-            Df[:,k+=1] .= q
+        q .*= -ll[j]
+        if zsj <= 0
+            Df[:,j] .= q
         else
-            if zi >= 0 # also T <: Real && S<:Complex
-                Df[:,k+=1] .= real(q)
-                if zi > 0
-                    Df[:,k+=1] .= imag(q)
-                end
+            if zsj > j
+                Df[:,j] .= real(q)
+                Df[:,zsj] .= imag(q)
             end
         end
     end
     Df
 end
 
-function realtocoeff(z::AbstractVector{<:Real}, zz::AbstractVector{S}) where S<:Complex
+function realtocoeff(z::AbstractVector{<:Real}, S::Type{<:Complex}, zs::AbstractVector)
+    
     r = similar(z, S)
-    k = 0
+    all( zs .<= 0 ) && return r
     for j = 1:length(z)
-        zzi = imag(zz[j])
-        if zzi == 0
-            k += 1
-            r[k] = z[k]
-        elseif zzi > 0
-            rk = z[k+1]/2 - im*z[k+2]/2
-            r[k+=1] = rk
-            r[k+=1] = conj(rk)
+        zsj = zs[j]
+        if zsj <= 0
+            r[j] = z[j]
+        elseif zsj > j
+            r[j] = z[j]/2 - im*z[zsj]/2
+            r[zsj] = conj(r[j])
         end
     end
     r
 end
-function realtocoeff(z::AbstractVector, zz::AbstractVector)
+function realtocoeff(z::AbstractVector, ::Type, zs::AbstractVector)
     z
 end
 
@@ -146,7 +148,7 @@ function products(z::AbstractVector{T}, ll::AbstractVector{Int}) where T <:Numbe
     m == length(ll) || throw(ArgumentError("root vector and muliplicities have differnet length"))
     all(ll .>= 0) || throw(ArgumentError("multiplicities must not be negative"))
     n = sum(ll)
-    S = coeffstype(z, ll)
+    S, = zerostructure(z, ll)
     r = zeros(S, n+1)
     r[1] = 1
     Z = zero(S)
@@ -154,14 +156,14 @@ function products(z::AbstractVector{T}, ll::AbstractVector{Int}) where T <:Numbe
     jj = sortperm(z, by=abs2, rev=false)
     z = view(z, jj)
     ll =  ll[jj]
-        while sum(ll) > 0
-            p = minpos(ll)
-            jm = findall(x-> x >= p, ll)
-            s = singprod(z[jm], S)
-            s = power(s, p)
-            ix = convolute!(ix, r, s)
-            ll[jm] .-= p
-        end
+    while sum(ll) > 0
+        p = minpos(ll)
+        jm = findall(x-> x >= p, ll)
+        s = singprod(z[jm], S)
+        s = power(s, p)
+        ix = convolute!(ix, r, s)
+        ll[jm] .-= p
+    end
     r
 end
 
@@ -187,7 +189,7 @@ function singprod(z::AbstractVector{T}, ::Type{S}) where {T<:Number,S<:Number}
                 ix = product2!(ix, r, 1, 2*rr, abs2(zk))
             end
         end
-    else # T is complex, but coefficient type is real
+    else
         for k = 1:m
             ix = product1!(ix, r, 1, -z[k])
         end
@@ -301,9 +303,11 @@ function adiv(c::AbstractVector{<:Number}, a::S, w::AbstractVector{<:Real}) wher
     r = Vector{T}(undef, n)
     d = Vector{T}(undef, n)
     b = Vector{S}(undef, n)
-    w1 = w[1]
-    u1 = c[1] * w1
-    for i = 1:n
+    b[1] = 1
+    b[n] = c[n+1] / a
+    w1 = w[2]
+    u1 = (c[2] - a) * w1
+    for i = 2:n-2
         w2 = w[i+1]
         u2 = c[i+1] * w2
         z = d[i] = hypot(w1, w2*aa)
@@ -314,8 +318,16 @@ function adiv(c::AbstractVector{<:Number}, a::S, w::AbstractVector{<:Real}) wher
         u1 = -w2z * u1 * a + w1z * u2
         w1 *= w2z
     end
-    bi = b[n] = b[n] / d[n]
-    for i = n-1:-1:1
+        w2 = w[n]
+        u2 = (c[n] - b[n]) * w2
+        z = d[n-1] = hypot(w1, w2*aa)
+        w1z = w1 / z
+        w2z = w2 / z
+        r[n-1] = w2z * w2
+        b[n-1] = w1z * u1 + w2z * u2 * ac
+        u1 = -w2z * u1 * a + w1z * u2
+    bi = b[n-1] = b[n-1] / d[n-1]
+    for i = n-2:-1:2
         bi = b[i] = (b[i] - bi * r[i] * ac) / d[i]
     end
     b, u1

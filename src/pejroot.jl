@@ -66,10 +66,8 @@
 #   1.00000000000000  20.00000000000000
 #
 """
-function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10, tol::U = 1e-8, style::Int = 2, prtsty::Int = 0) where {T<:Number,S<:Number,U<:AbstractFloat}
+function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10, tol::U = 1e-8, style::Int = 2, prtsty::Int = 1) where {T<:Number,S<:Number,U<:AbstractFloat}
 
-    CT = coeffstype(z, mult)
-    CT<:T || throw(ArgumentError("coefficient type $T not sufficient for $CT roots"))
     E = one(U)
     Z = zero(U)
 
@@ -83,10 +81,14 @@ function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10
 
     # sort initial values to enhance accuracy
     # It is interesting, sorting really improves accuracy
-    jj = sortperm(abs.(z), rev=true)	# greatest first
+    jj = sortperm(abs.(z), rev=false)	# greatest first
     y0 = z[jj]
     ll = mult[jj]
-
+    CT, zs = zerostructure(y0, ll)
+    if !(CT<:T)
+        f = CT.(f)
+    end
+    
     job = 0						# initialize job success return value
     y = copy(y0)				# pass the initial iterate
     h = copy(f[2:n+1])	        # make the RHS
@@ -120,17 +122,24 @@ function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10
         end
   
         # evaluate the coefficient operator and its Jacobian
-        b = polyG(y, ll) - h
-        Df = polyDG(y, ll)
+        pr = products(y, ll)
+        b = polyG(pr) - h
+        Df = polyDG(y, ll, pr, zs)
 
         if style == 2   # scale
-            b = b .* w
-            for j = 1:n
-                Df[j,1:end] = Df[j,1:end] * w[j]
-            end
+            b = w .* b
+            lmul!(Diagonal(w), Df)
          end
 
-         d = Df \ b							# least squares 
+         d = realtocoeff(Df \ b, S, zs) # least squares 
+        
+         Dfc = lmul!(Diagonal(w), polyDG(y, ll))
+         dc = Dfc \ b
+        
+         # println("deviation dgc to dg: $(norm(d - dc))")
+         # display([d dc])
+         # display(Df)
+         # display(Dfc)
 
          delta[k] = norm(d, 2)
          bcker[k] = norm(b, Inf)
@@ -156,7 +165,7 @@ function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10
             end
         end
        
-         y .-= d                            # correct the roots
+         y .-= d                        # correct the roots
          bkerr = bcker[k]
       end # k-loop
 

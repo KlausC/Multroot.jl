@@ -106,7 +106,7 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
                 jj = ix[jm]
                 deleteat!(ix, jm)
                 l[jj] += 1                     # increase multiplicity of that root
-                # println("k = $k m = $m: z[$jj] = $(z[jj]) ~ $tj tz = $tz")
+                # println("k = $k m = $m: z[$jj] = $(z[jj]) tz = $tz")
                 tz <= 0.1 * (abs(z[jj])+0.01) || error("inacceptable root, k = $k tz = $tz")
             end
             if m == 1

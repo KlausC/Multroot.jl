@@ -52,7 +52,7 @@ end
 
 function polyDG(zz::AbstractVector{S}, ll::AbstractVector{<:Integer}, p::AbstractArray{T}, zs::AbstractVector{<:Integer}) where {S<:Number,T<:Number}
 
-    w = [1/max(pp, 1) for pp in p]
+    w = [1/max(abs(pp), 1) for pp in p]
     m = length(zz)
     n = sum(ll)
     Df = zeros(T, n, m)

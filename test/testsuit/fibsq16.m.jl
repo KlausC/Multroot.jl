@@ -4,7 +4,7 @@ function fibsq16()
 #  square of Fibocacci polynomial
 #
     n = 16;
-    p = [-1,ones(1,n)];
+    p = [-1; ones(n)];
     p = conv(p,p);
     z = [-.9349216524104182;
          -.8673161854070643-.3515310211756676*im;

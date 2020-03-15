@@ -5,8 +5,8 @@ function jt11c()
     m = 25;
     y = exp.((im*pi) .*  (1-m:m-1) ./ (2*m))
     z = 0.9*exp.((im*pi) .* (m:3*m) ./ (2*m))
-    u = [y z]
+    u = [y; z]
     p = poly(u)
-    z = [[y; z] ones(4*m)]
+    z = [u ones(length(u))]
     p, PolyZeros(z)
 end

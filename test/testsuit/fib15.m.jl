@@ -20,6 +20,6 @@ function fib15()
          .8931744004970845+.4240640341420445*im;
          1.999969475434503];
 
-    z = [z ones(1)];
+    z = [z ones(n)];
     p, PolyZeros(z)
 end

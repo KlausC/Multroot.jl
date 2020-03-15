@@ -42,13 +42,13 @@ function farloi01()
 #
 # Farmer-Loizou
 #
-    p = conv([1;1;2],[1;1;3]);
+    p = conv([1.0;1;2],[1;1;3]);
     p = conv(p,p); p = conv(p,p);
     z = [-0.50000000000000 + 1.65831239517770im
         -0.50000000000000 - 1.65831239517770im
         -0.50000000000000 + 1.32287565553230im
         -0.50000000000000 - 1.32287565553230im];
-    z = [z 4*ones(1)];
+    z = [z 4*ones(4)];
     
     p, PolyZeros(z)
 end
@@ -147,7 +147,7 @@ function fib100()
          .9917988816037989-.1265517518780266*im; .9917988816037989+.1265517518780266*im;
          .9979464229745987-.06341873580445710*im; .9979464229745987+.06341873580445710*im;
          2.000000000000000];
-    z = [z' ones(1)];
+    z = [z ones(n)];
     p, PolyZeros(z)
 end
 function fib15()
@@ -172,7 +172,7 @@ function fib15()
          .8931744004970845+.4240640341420445*im;
          1.999969475434503];
 
-    z = [z ones(1)];
+    z = [z ones(n)];
     p, PolyZeros(z)
 end
 function fib150()
@@ -479,7 +479,7 @@ function fibsq24()
 #
     n = 24;
     p = fib(n)
-    p = conv(p,p)
+    p = conv(p, p)
     z = [-.9558467190743565;
          -.9244083656460181-.2442575811931259*im;
          -.9244083656460181+.2442575811931259*im;
@@ -505,7 +505,7 @@ function fibsq24()
          .9602996918859324+.2681678908797330*im;
          1.999999940395313];
     z = [z 2*ones(n)]
-    p, PolyZero(z)
+    p, PolyZeros(z)
 end
 function fibsq32()
 #
@@ -705,8 +705,8 @@ function igyp02(m)
 #
 #  generalization of Igarash and Ypma
 # 
-   p = poly([10*(1+i)*ones(m); -1*ones(10-m)])
-   z = [10.0*(1+i) m; -1 10-m];
+   p = poly([10*(1+im)*ones(m); -1*ones(10-m)])
+   z = [10.0*(1+im) m; -1 10-m];
    p, PolyZeros(z)
 end
 function igyp02a()
@@ -773,9 +773,9 @@ function inex(digits)
 #
 #  test polynomial suggested by Goedecker
 #
-    p = poly([(10/11)*[1;1;1;1;1];(20/11)*[1;1;1];(30/11)*[1;1]])
-    p = round.(10^digits*p) ./ 10^digits
-    z = reverse([10/11 5; 20/11 3; 30/11 2])
+    p = poly([(10/11)*[1;1;1;1;1]; (20/11)*[1;1;1]; (30/11)*[1;1]])
+    p = round.(10^digits*reverse(p.a)) ./ 10^digits
+    z = reverse([10/11 5; 20/11 3; 30/11 2]; dims=1)
     p, PolyZeros(z)
 end
 function inex01()
@@ -824,8 +824,8 @@ function jt02()
 #
 #  test polynomial suggested by Jenkins and Traub
 #
-    p = poly([1.0:17])
-    z = [1.0:17]
+p = poly([(1.0:17)...])
+    z = [(1.0:17)...]
     z = [z ones(17)]
     p, PolyZeros(z)
 end
@@ -833,7 +833,7 @@ function jt03()
 #
 #  test polynomial suggested by Jenkins and Traub
 #
-    z = 1/exp10.(1:8)
+    z = 1 ./ exp10.(1:8)
     p = poly(z)
     z = [z ones(8)]
     p, PolyZeros(z)
@@ -868,8 +868,8 @@ function jt07a()
 #  test polynomial suggested by Jenkins and Traub
 #
    a = 10.0^(-10);
-   p = poly([.001; .01; .1; .1+a*i; .1-a*i; 1; -10])
    z = [.001; .01; .1; .1+a*im; .1-a*im; 1; -10]
+   p = poly(z)
    z = [z ones(7)]
    y = [-10  1; 1  1; 0.01  1; 0.001  1; 0.1  3];
    p, PolyZeros(z), PolyZeros(y)
@@ -879,8 +879,8 @@ function jt07b()
 #  test polynomial suggested by Jenkins and Traub
 #
    a = 1e-9
-   p = poly([.001; .01; .1; .1+a*i; .1-a*i; 1; -10])
-   z = [.001; .01; .1; .1+a*i; .1-a*i; 1; -10];
+   z = [.001; .01; .1; .1+a*im; .1-a*im; 1; -10];
+   p = poly(z)
    z = [z ones(7)];
    y = [-10  1; 1  1; 0.01  1; 0.001  1; 0.1  3];
    p, PolyZeros(z), PolyZeros(y)
@@ -890,8 +890,8 @@ function jt07c()
 #  test polynomial suggested by Jenkins and Traub
 #
     a = 1e-8
-    p = poly([.001; .01; .1; .1+a*im; .1-a*im; 1; -10])
     z = [.001; .01; .1; .1+a*im; .1-a*im; 1; -10]
+    p = poly(z)
     z = [z ones(7)]
     y = [-10  1; 1  1; 0.01  1; 0.001  1; 0.1  3]
     p, PolyZeros(z), PolyZeros(y)
@@ -900,9 +900,9 @@ function jt07d()
 #
 #  test polynomial suggested by Jenkins and Traub
 #
-    a = 1ie-7
-    p = poly([.001; .01; .1; .1+a*im; .1-a*im; 1; -10])
+    a = 1e-7
     z = [.001; .01; .1; .1+a*im; .1-a*im; 1; -10];
+    p = poly(z)
     z = [z ones(7)]
     y = [-10  1; 1  1; 0.01  1; 0.001  1; 0.1  3];
 
@@ -982,10 +982,10 @@ function jt11a()
 #
     m = 15;
     y = exp.((im*pi) .* (1-m:m-1) ./ (2*m))
-    z = 0.9*exp((im*pi) .*(m:3*m) ./ (2*m))
+    z = 0.9*exp.((im*pi) .*(m:3*m) ./ (2*m))
     p1 = poly(y)
     p2 = poly(z)
-    p = conv(p1,p2)
+    p = reverse(conv(p1.a, p2.a))
     z = [[y; z] ones(4*m)]
     p, PolyZeros(z)
 end
@@ -1008,9 +1008,9 @@ function jt11c()
     m = 25;
     y = exp.((im*pi) .*  (1-m:m-1) ./ (2*m))
     z = 0.9*exp.((im*pi) .* (m:3*m) ./ (2*m))
-    u = [y z]
+    u = [y; z]
     p = poly(u)
-    z = [[y; z] ones(4*m)]
+    z = [u ones(length(u))]
     p, PolyZeros(z)
 end
 function large01()
@@ -1169,6 +1169,12 @@ largez04() = largez(3)
 largez05() = largez(4)
 largez06() = largez(5)
 
+largez01() = largez(1)
+largez02() = largez(2)
+largez03() = largez(3)
+largez04() = largez(4)
+largez05() = largez(5)
+largez06() = largez(6)
 function lgd(n)
 #
 #  test polynomial suggested by Goedecker
@@ -1355,9 +1361,9 @@ function miyak02()
 #  test polynomial suggested by Goedecker
 #  square of Fibocacci polynomial
 #
-    p = poly([(1.1+1.1im)*ones(4);(3.2+2.3im)*[1;1];2.1+1.5im]);
-    p = conv(p,p);
-    z = [[(1.1+1.1im);(3.2+2.3im);2.1+1.5im] 2*[4;2;1]];
+    p = poly([(1.1+1.1im)*ones(4); (3.2+2.3im)*[1;1]; 2.1+1.5im])
+    p = reverse(conv(p.a, p.a))
+    z = [[(1.1+1.1im);(3.2+2.3im);2.1+1.5im] 2*[4;2;1]]
     p, PolyZeros(z)
 end
 function miyak04()
@@ -1365,10 +1371,11 @@ function miyak04()
 #  test polynomial suggested by Goedecker
 #  square of Fibocacci polynomial
 #
-    p = poly([(1.1+1.1im)*ones(4);(3.2+2.3im)*[1;1];2.1+1.5im]);
-    p = conv(p,p);
-    p = conv(p,p);
-    z = [[(1.1+1.1im);(3.2+2.3im);2.1+1.5im] 4*[4;2;1]];
+    p = poly([(1.1+1.1im)*ones(4); (3.2+2.3im)*[1;1]; 2.1+1.5im]);
+    p = reverse(p.a)
+    p = conv(p, p)
+    p = conv(p, p)
+    z = [[(1.1+1.1im); (3.2+2.3im); 2.1+1.5im] 4*[4;2;1]];
     p, PolyZeros(z)
 end
 function miyak08()
@@ -1376,11 +1383,12 @@ function miyak08()
 #  test polynomial suggested by Goedecker
 #  square of Fibocacci polynomial
 #
-    p = poly([(1.1+1.1im)*ones(4);(3.2+2.3im)*[1;1];2.1+1.5im]);
-    p = conv(p,p);
-    p = conv(p,p);
-    p = conv(p,p);
-    z = [[(1.1+1.1im);(3.2+2.3im);2.1+1.5im] 8*[4;2;1]];
+    p = poly([(1.1+1.1im)*ones(4); (3.2+2.3im)*[1;1]; 2.1+1.5im]);
+    p = reverse(p.a)
+    p = conv(p, p)
+    p = conv(p, p)
+    p = conv(p, p)
+    z = [[(1.1+1.1im); (3.2+2.3im); 2.1+1.5im] 8*[4;2;1]];
     p, PolyZeros(z)
 end
 function near01()

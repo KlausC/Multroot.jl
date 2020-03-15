@@ -4,7 +4,7 @@ function petk06()
 #
     y = [-1.0*[1;1;1;1];3*[1;1;1];-im;-im];
 
-    p1 = poly(y);
+    p1 = reverse(poly(y).a)
     p2 = [1.0;-2;5];
     p2 = conv(p2,p2);
     p = conv(p1,p2);

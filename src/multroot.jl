@@ -43,9 +43,14 @@ function multroot(p::AbstractVector{T}; tol::S = 1e-10, scaling::Bool=false) whe
     end
 
     scale = scale!(q, scaling)
-	z0, bke = gcdroot(q, tol)
+	z0, bke = try
+        gcdroot(q, tol)
+    catch ex
+        @warn ex
+        S[], Inf
+    end
 
-    if bke < S(1.0e200)
+    if bke < S(0.01)
 println("before pjeroot")
 
         z1, bkerr, pjcnd, job = pejroot(q, z0.z, z0.mult)

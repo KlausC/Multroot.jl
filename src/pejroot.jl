@@ -66,7 +66,7 @@
 #   1.00000000000000  20.00000000000000
 #
 """
-function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10, tol::U = 1e-8, style::Int = 2, prtsty::Int = 1) where {T<:Number,S<:Number,U<:AbstractFloat}
+function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10, tol::U = 1e-8, style::Int = 2, prtsty::Int = 0) where {T<:Number,S<:Number,U<:AbstractFloat}
 
     E = one(U)
     Z = zero(U)
@@ -133,16 +133,8 @@ function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10
 
          d = realtocoeff(Df \ b, S, zs) # least squares 
         
-         Dfc = lmul!(Diagonal(w), polyDG(y, ll))
-         dc = Dfc \ b
-        
-         # println("deviation dgc to dg: $(norm(d - dc))")
-         # display([d dc])
-         # display(Df)
-         # display(Dfc)
-
          delta[k] = norm(d, 2)
-         bcker[k] = norm(b, Inf)
+         bcker[k] = norm(b, 2)
 
          if prtsty >= 1 
              @printf(" %2.0f    %10.2e    %10.2e\n", k, bcker[k], delta[k])
@@ -164,14 +156,32 @@ function pejroot(f::AbstractVector{T}, z::AbstractVector{S}, mult; noi::Int = 10
                  end
             end
         end
-       
-         y .-= d                        # correct the roots
+        
+         yy = y
+         step = 1.0
+         stepmin = 1/16
+         while step >= stepmin
+             y = yy - d * step
+             pr = products(y, ll)
+             b = (polyG(pr) - h)
+             if style == 2
+                 b = w .* b
+             end
+             bks = norm(b, 2)
+             if isnan(bks)
+                 stepmin *= 0.5
+             end
+             if bks < bcker[k]
+                 break
+             end
+             step *= 0.5
+         end
          bkerr = bcker[k]
       end # k-loop
 
       if job == 1
-          s = svd(Df)
-          pjcnd = 1 / s.S[m]  # get pej. cond. number
+          s = svdvals(Df)
+          pjcnd = 1 / s[m]  # get pej. cond. number
           jj = sortperm(ll)
           y = y[jj]
           ll = ll[jj]   # sort by multiplicities

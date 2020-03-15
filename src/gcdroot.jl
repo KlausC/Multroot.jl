@@ -64,10 +64,11 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
                 s0 = s  # save previous sigma
                 
                 s, x = zminsv(A, tol)
-                if m > 1 && s > s0
+                if m > 1 && s > s0 + norm(f, Inf) * eps()
+                    m -= 1
                     break
                 end
-                #@printf("s. value %g,%g,%g\n", m, k, s)
+                # @printf("s. value %g,%g,%g\n", m, k, s)
                 if x[1] == 0
                     x[1] = eps()
                 end
@@ -75,7 +76,7 @@ function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:Abstr
                 if s < wthrh * nf || m == mx || s < drop * s0
                     # h = gcd(f, g); u = f / h; v = g / h
                     h, u, v, res0, res, sm = gcd_refinement(x, m, f, g, A)
-                    if res < wtol || m == mx
+                    if m == length(u) - 1 && (res < wtol || m == mx)
                         wtol = max(wtol, res * gamma)	     # increase tolerance by factor 
                         wthrh = max(wthrh, (s / nf) * delta) # increase threshold by factor
                         break # for mm

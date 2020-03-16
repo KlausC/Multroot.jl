@@ -29,11 +29,11 @@ global const extract_sylves = extract_sylves2
                `z = gcdroot(p)`. 
 
 """
-function gcdroot(p::AbstractVector{T}, tol::S = 1e-10) where {T<:Number,S<:AbstractFloat}
-    gamma = S(100)		# residual growth factor, default = 100
-    delta = S(100)	    # threshold growth factor, default = 100
-    thresh = tol*100	# zero singular threshold, default = 100*tol
-    drop = S(5.0e-5)	# try Gauß-Newton if sigma(k) < drop * sigma(k-1)
+function gcdroot(p::AbstractVector{T}, tol::S = 1e-10; gamma=S(100), delta = S(100), thresh=tol*100, drop=S(5e-5)) where {T<:Number,S<:AbstractFloat}
+    # gamma     residual growth factor, default = 100
+    # delta     threshold growth factor, default = 100
+    # thresh    zero singular threshold, default = 100*tol
+    # drop      try Gauß-Newton if sigma(k) < drop * sigma(k-1)
 
     E = one(T); RE = real(E); Z = zero(T); RZ = real(Z)
 

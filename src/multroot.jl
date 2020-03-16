@@ -51,7 +51,6 @@ function multroot(p::AbstractVector{T}; tol::S = 1e-10, scaling::Bool=false) whe
     end
 
     if bke < S(0.01)
-println("before pjeroot")
 
         z1, bkerr, pjcnd, job = pejroot(q, z0.z, z0.mult)
         

@@ -20,7 +20,7 @@
 #
 # Calling syntax: The simplest way to call is
 #  
-#   » pejroot(f,y,m)
+#     pejroot(f,y,m)
 #
 # where the input items are
 #          f --- (row vector) the target polynomial
@@ -29,7 +29,7 @@
 #
 # For more advanced usage:
 #
-#	» [z, e, c] = pejroot(f, y, l; noi, tol, style, prtsty)
+#	 [z, e, c] = pejroot(f, y, l; noi, tol, style, prtsty)
 #
 # The output 
 #          z --- (matrix) distinct roots (1st column) and corresponding
@@ -54,11 +54,11 @@
 #                               2: plus intemediate root approximations
 #  Example:
 #
-# » f = poly([ones(1,20) 2*ones(1,10) 3*ones(1,5)]); # construct the test 
+#  f = poly([ones(1,20) 2*ones(1,10) 3*ones(1,5)]); # construct the test 
 #                					# polynomial with multiple roots
-# » y = [0.95,2.05,2.95];           # prepare initial iterate
-# » m = [20, 10, 5];                # prepare the multiplicity structure
-# » pejroot(f,y,m)                  # running the program
+#  y = [0.95,2.05,2.95];           # prepare initial iterate
+#  m = [20, 10, 5];                # prepare the multiplicity structure
+#  pejroot(f,y,m)                  # running the program
 # ans =
 #
 #   3.00000000000000   5.00000000000000

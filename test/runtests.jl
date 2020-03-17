@@ -1,16 +1,40 @@
 using Multroot
 using Base.Filesystem
 using Polynomials
+using LinearAlgebra
+
+import Multroot: diffmult, diffzeros
+
+using Test
 
 # assuming pwd = package/test
 const ts = "testsuit"
-println(pwd())
 
 function runtest(fun::Function)
     println("testing multroot with ", fun)
-    p, z = fun()
-    p = p isa Poly ? reverse(p.a) : p
-    zz, bkerr, job = multroot(p)
+    @testset "$fun" begin
+        p, z, job_exp, bkerr_exp, mult_exp, znorm_exp = wrap_fun(fun)
+        zz, bkerr, pjcond, job = multroot(p)
+        z = sort(z)
+        zz = sort(z)
+        job == 0 && return
+        @test job == job_exp
+        @test bkerr <= bkerr_exp
+        @test length(zz.mult) == length(z.mult)
+        lc = length(zz.mult) == length(z.mult)
+        @test lc && diffmult(zz, z) <= mult_exp
+        @test lc && diffzeros(zz, z) <= znorm_exp
+    end
+end
+
+function wrap_fun(fun::Function, args...)
+    p, z, = fun(args...)
+    pp  = p isa Poly ? reverse(p.a) : p
+    job_exp = 1
+    bkerr_exp = Inf
+    mult_exp = 0
+    znorm_exp = norm(z.z, Inf) * 1e-8
+    pp, z, job_exp, bkerr_exp, mult_exp, znorm_exp
 end
 
 functpath, io = mktemp(cleanup = true)
@@ -31,6 +55,9 @@ end
 close(io)
 include(functpath)
 
-for fun in functions
-    runtest(fun)
-end    
+@testset "testsuite" begin
+    for fun in functions
+        runtest(fun)
+    end
+end
+

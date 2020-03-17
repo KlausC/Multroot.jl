@@ -30,5 +30,5 @@ function toh02()
         -0.61611009709266 - 0.22255230874526im;
         ];
    z = [z ones(20)];
-   p, z
+   p, PolyZeros(z)
 end

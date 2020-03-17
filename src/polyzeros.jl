@@ -167,3 +167,34 @@ function evaluate(z::PolyZeros{S}, x::T, ll::AbstractVector{Int}) where {S,T}
 end
 evaluate(z::PolyZeros{S}, x::T) where {S,T} = evaluate(z, x, z.mult)
 
+"""
+"""
+function Base.sort(z::PolyZeros)
+    m = length(z.z)
+    flist = [
+             a::Int->z.mult[a],
+             a::Int->abs(z.z[a]),
+             a::Int->real(z.z[a]),
+             a::Int->imag(z.z[a])
+            ]
+    wlist = [
+             1000,
+             1.0,
+             0.1,
+             0.01
+            ]
+    ev(f, a) = f(a)
+    function lt(a::Int, b::Int)
+        dot(ev.(flist, a), wlist) < dot(ev.(flist, b), wlist)
+    end
+    jj = sortperm(1:m, lt=lt)
+    PolyZeros(z.z[jj], z.mult[jj])
+end 
+
+function diffmult(za::PolyZeros, zb::PolyZeros)
+    maximum(abs, za.mult - zb.mult)
+end
+function diffzeros(za::PolyZeros, zb::PolyZeros)
+    norm(za.z - zb.z, Inf)
+end
+

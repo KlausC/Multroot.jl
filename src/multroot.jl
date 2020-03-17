@@ -39,7 +39,7 @@ function multroot(p::AbstractVector{T}; tol::S = 1e-10, scaling::Bool=false) whe
     j1, j2 = extrema(jj)
     q = p[j1:j2]
     if j1 >= j2
-        return PolyZeros(T[], Int[]), Z, 0
+        return PolyZeros(T[], Int[]), Inf, Inf, 0
     end
 
     scale = scale!(q, scaling)
@@ -87,12 +87,14 @@ function multroot(p::AbstractVector{T}; tol::S = 1e-10, scaling::Bool=false) whe
 				end
             end
         else
-            z1 = roots(p)	# fallback to standard rootfinder
-			l = ones(n - 1)
+            z = roots(p)	# fallback to standard rootfinder
+			l = ones(Int, n - 1)
+            z1 = PolyZeros(z, l)
         end
     else
-        z1 = roots(p)		# fallback to standard rootfinder
-		l = ones(T, n - 1)
+        z = roots(p)		# fallback to standard rootfinder
+		l = ones(Int, n - 1)
+        z1 = PolyZeros(z, l)
 		job = 0
 		bkerr = S(Inf)
 		pjcnd = S(Inf)

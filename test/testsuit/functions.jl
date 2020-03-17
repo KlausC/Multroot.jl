@@ -1,6 +1,7 @@
 import Multroot: convolute
 
 conv(a, b) = convolute(a, b)
+conv(a::Poly, b::Poly) = conv(p.a, b.a)
 function bt01()
 #
 # Brugnano and Trigiante
@@ -14,7 +15,7 @@ function bt02()
 # Brugnano and Trigiante
 #
     p = poly([ones(10);-1;-1;im;-im;2])
-    z = [1 6; -1 2; im 1; -im 1];
+    z = [1.0 10; -1 2; im 1; -im 1; 2 1];
     
     p, PolyZeros(z)
 end
@@ -1174,7 +1175,6 @@ largez02() = largez(2)
 largez03() = largez(3)
 largez04() = largez(4)
 largez05() = largez(5)
-largez06() = largez(6)
 function lgd(n)
 #
 #  test polynomial suggested by Goedecker
@@ -1422,7 +1422,8 @@ function petk01()
 #
 # M. Petkovic testing polynomials (p. 109)
 #
-    p1 = poly([-1; -1; 3; 3; 3; -im*[1;1;1;1]]);
+    p1 = poly([-1.0; -1; 3; 3; 3; -im*[1;1;1;1]]);
+    p1 = reverse(p1.a)
     p2 = [1;-2;5];
     p2 = conv(p2,p2);
     p = conv(p1,p2);
@@ -1433,7 +1434,7 @@ function petk02()
 #
 # M. Petkovic testing polynomials, p118
 #
-    p = poly([1;1;-im;-im;-im;5*im;5*im;-5*im;-5*im]);
+    p = poly([1.0;1;-im;-im;-im;5*im;5*im;-5*im;-5*im]);
     z = [1 2; -im 3; 5*im 2; -5*im 2];
     
     p, PolyZeros(z)
@@ -1483,7 +1484,7 @@ function petk06()
 #
     y = [-1.0*[1;1;1;1];3*[1;1;1];-im;-im];
 
-    p1 = poly(y);
+    p1 = reverse(poly(y).a)
     p2 = [1.0;-2;5];
     p2 = conv(p2,p2);
     p = conv(p1,p2);
@@ -1544,14 +1545,14 @@ function toh02()
         -0.61611009709266 - 0.22255230874526im;
         ];
    z = [z ones(20)];
-   p, z
+   p, PolyZeros(z)
 end
 function toh03()
 #
 #  generalization of K.C. Toh and L. N. Trefethen
 # 
     k = [(1:20)...]
-    z = 10/11 - exp2.(-k)
+    z = 10/11 .- exp2.(-k)
     p = poly(z)
     z = [z ones(20)]
 
@@ -1722,7 +1723,7 @@ function uhlig01()
 #
     a = 0.01;
     p1 = [1;0;0;0;-a^4]
-    p2 = poly([a;a;a;a])
+    p2 = reverse(poly([a;a;a;a]).a)
     p = conv(p1,p2)
     z = [-0.01000000000000 - 0.00000000000000im
          -0.00000000000000 + 0.01000000000000im
@@ -1737,7 +1738,7 @@ function uhlig02()
 #
      a = 0.001;
      p1 = [1;0;0;0;-a^4]
-     p2 = poly([a;a;a;a])
+     p2 = reverse(poly([a;a;a;a]).a)
      p = conv(p1,p2)
      z = [ -0.00000000000000 + 0.00100000000000im
          -0.00000000000000 - 0.00100000000000im

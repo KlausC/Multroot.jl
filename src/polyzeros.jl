@@ -198,3 +198,100 @@ function diffzeros(za::PolyZeros, zb::PolyZeros)
     norm(za.z - zb.z, Inf)
 end
 
+"""
+    subsetapprox(p::Vector{S}, q::Vector{S}, dist::Function)
+
+Let `length(p) <= length(q)` and `S` have a distance function `dist(::S,::S)`.
+Find a vector `x` of indices into `q` with `length(jj) == length(p)`
+which minimizes the term `maximum(dist(p[i], q[x[i]) for i in 1:length(p))`.
+"""
+function subsetapprox(a::AbstractVector{T}, b::AbstractVector{T}, dist::Function, ::Type{S}) where {T,S<:Real}
+
+    branch_and_bound(a, b, dist, typemax(S))
+end
+
+function branch_and_bound(a, b, dist, inbound)
+    x = branch_and_bound1(a, b, dist, inbound)
+    if x[1]
+        println("called b&b($inbound)")
+        display(dist.(b, transpose(a)))
+        println("returning $x")
+    end
+    x
+end
+
+function branch_and_bound1(a, b, dist, inbound::S) where S
+    bound, ix, y, isopt = heuristics(a, b, dist, inbound)
+    isopt == 1 && return true, bound, y
+    isopt == 2 && return false, Inf, y
+    m = length(a)
+    n = length(b)
+    ii = [1:ix-1;ix+1:m]
+    ai = a[ix]
+    ci = bound
+    xi = Vector{Int}(undef, m-1)
+    ji = 0
+    for j = 1:n
+        cij = dist(ai, b[j])
+        # cij > ci && continue
+        jj = [1:j-1;j+1:n]
+        ok, bij, xx = branch_and_bound(view(a, ii), view(b, jj), dist, ci)
+        ok || continue
+        if bij < ci
+            ci = bij
+            xi = jj[xx]
+            ji = j
+        end
+    end
+    return true, ci, [xi[1:ix-1];ji;xi[ix:m-1]]
+end
+
+function heuristics(a::AbstractVector{T}, b::AbstractVector{T}, dist::Function, inbounds::S) where {T,S<:Real}
+
+    m = length(a)
+    n = length(b)
+    m <= n || throw(ArgumentError("first vector longer than second vector"))
+    function findmin2(ai, jj)
+        vi = findmin([dist(ai, b[j]) for j in jj])
+        vi !== nothing ? vi : (typemax(S), 0)
+    end
+    c = Vector{S}(undef, m)
+    y = Vector{Int}(undef, m)
+    for i = 1:m
+        c[i], y[i] = findmin2(a[i], 1:n)
+    end
+    ii = collect(1:m)
+    jj = collect(1:n)
+    cc = zero(S)
+    ix = 0
+    isopt = 1
+    while !isempty(ii)
+        kc = 0
+        ci, k = findmax(view(c, ii))
+        ic = ii[k]
+        jc = y[ic]
+        if ci > cc
+            if iszero(cc) && ci >= inbounds
+                return ci, ic, y, 2
+            end
+            cc = ci
+            ix = ic
+        end
+        deleteat!(ii, k)
+        deleteat!(jj, findfirst(isequal(jc), jj))
+        for i in ii
+            if y[i] == jc
+                ci, k = findmin2(a[i], jj)
+                y[i] = jj[k]
+                c[i] = ci
+                if ci > cc
+                    cc = ci
+                    ix = i
+                    isopt = 0
+                end
+            end
+        end
+    end
+    cc, ix, y, isopt
+end
+

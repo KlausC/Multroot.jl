@@ -205,38 +205,53 @@ Let `length(p) <= length(q)` and `S` have a distance function `dist(::S,::S)`.
 Find a vector `x` of indices into `q` with `length(jj) == length(p)`
 which minimizes the term `maximum(dist(p[i], q[x[i]) for i in 1:length(p))`.
 """
-function subsetapprox(a::AbstractVector{T}, b::AbstractVector{T}, dist::Function, ::Type{S}) where {T,S<:Real}
-
-    branch_and_bound(a, b, dist, typemax(S))
+function subsetapprox(a::AbstractVector{T}, b::AbstractVector{T}, dist::Function) where T
+    A = dist.(b, transpose(a))
+    S = eltype(A)
+    branch_and_bound(A, axes(A)..., typemax(S))
 end
 
-function branch_and_bound(a, b, dist, inbound)
-    x = branch_and_bound1(a, b, dist, inbound)
-    if x[1]
+function branch_and_bound22(A, jj, ii, inbound)
+    res = branch_and_bound1(A, jj, ii, inbound)
+    ok, v, x = res
+    if ok
         println("called b&b($inbound)")
-        display(dist.(b, transpose(a)))
-        println("returning $x")
+        display(A[jj,ii])
+        if minimum(x) < 1 || maximum(x) > length(jj)
+            println("wrong x after b&b:")
+            display(x')
+        end
+        vv, xx = target(view(A, jj, ii), x)
+        if true # v != maximum(xx)
+            println("returning $v")
+            display([x xx]')
+        end
     end
-    x
+    res
 end
 
-function branch_and_bound1(a, b, dist, inbound::S) where S
-    bound, ix, y, isopt = heuristics(a, b, dist, inbound)
+function target(A, y)
+    x = getindex.(Ref(A), y, 1:length(y))
+    maximum(x), x
+end
+
+function branch_and_bound(A, aj, ai, inbound::S) where S<:Real
+    bound, ix, y, isopt = heuristics(view(A, aj, ai), inbound)
     isopt == 1 && return true, bound, y
     isopt == 2 && return false, Inf, y
-    m = length(a)
-    n = length(b)
-    ii = [1:ix-1;ix+1:m]
-    ai = a[ix]
+    n, m = length(aj), length(ai)
+    ii = ai[[1:ix-1;ix+1:m]]
     ci = bound
-    xi = Vector{Int}(undef, m-1)
-    ji = 0
+    xi = aj[y[[1:ix-1;ix+1:m]]]
+    ji = aj[y[ix]]
     for j = 1:n
-        cij = dist(ai, b[j])
-        # cij > ci && continue
-        jj = [1:j-1;j+1:n]
-        ok, bij, xx = branch_and_bound(view(a, ii), view(b, jj), dist, ci)
+        j == ji && continue
+        cij = A[aj[j], ai[ix]]
+        cij > ci && continue
+        jj = aj[[1:j-1;j+1:n]]
+        ok, bij, xx = branch_and_bound(A, jj, ii, ci)
         ok || continue
+        bij = max(bij, cij)
         if bij < ci
             ci = bij
             xi = jj[xx]
@@ -246,19 +261,18 @@ function branch_and_bound1(a, b, dist, inbound::S) where S
     return true, ci, [xi[1:ix-1];ji;xi[ix:m-1]]
 end
 
-function heuristics(a::AbstractVector{T}, b::AbstractVector{T}, dist::Function, inbounds::S) where {T,S<:Real}
+function heuristics(A::AbstractMatrix{S}, inbounds::S) where S<:Real
 
-    m = length(a)
-    n = length(b)
+    n, m = size(A)
     m <= n || throw(ArgumentError("first vector longer than second vector"))
-    function findmin2(ai, jj)
-        vi = findmin([dist(ai, b[j]) for j in jj])
+    function findmin2(i, jj)
+        vi = findmin(A[jj,i])
         vi !== nothing ? vi : (typemax(S), 0)
     end
     c = Vector{S}(undef, m)
     y = Vector{Int}(undef, m)
     for i = 1:m
-        c[i], y[i] = findmin2(a[i], 1:n)
+        c[i], y[i] = findmin2(i, 1:n)
     end
     ii = collect(1:m)
     jj = collect(1:n)
@@ -281,7 +295,7 @@ function heuristics(a::AbstractVector{T}, b::AbstractVector{T}, dist::Function, 
         deleteat!(jj, findfirst(isequal(jc), jj))
         for i in ii
             if y[i] == jc
-                ci, k = findmin2(a[i], jj)
+                ci, k = findmin2(i, jj)
                 y[i] = jj[k]
                 c[i] = ci
                 if ci > cc

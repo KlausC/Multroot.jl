@@ -211,17 +211,17 @@ function subsetapprox(a::AbstractVector{T}, b::AbstractVector{T}, dist::Function
     branch_and_bound(A, axes(A)..., typemax(S))
 end
 
-function branch_and_bound22(A, jj, ii, inbound)
+function branch_and_bound2(A, jj, ii, inbound)
     res = branch_and_bound1(A, jj, ii, inbound)
     ok, v, x = res
     if ok
         println("called b&b($inbound)")
-        display(A[jj,ii])
-        if minimum(x) < 1 || maximum(x) > length(jj)
+        display([[0;jj] [ii'; A[jj,ii]]])
+        if minimum(x) < 1 || maximum(x) > size(A,1)
             println("wrong x after b&b:")
             display(x')
         end
-        vv, xx = target(view(A, jj, ii), x)
+        vv, xx = result(A, x, ii)
         if true # v != maximum(xx)
             println("returning $v")
             display([x xx]')
@@ -230,15 +230,19 @@ function branch_and_bound22(A, jj, ii, inbound)
     res
 end
 
-function target(A, y)
-    x = getindex.(Ref(A), y, 1:length(y))
-    maximum(x), x
+function result(A, y, x)
+    z = getindex.(Ref(A), y, x)
+    target(z), z
+end
+
+function target(z)
+    norm(z, Inf)
 end
 
 function branch_and_bound(A, aj, ai, inbound::S) where S<:Real
     bound, ix, y, isopt = heuristics(view(A, aj, ai), inbound)
-    isopt == 1 && return true, bound, y
-    isopt == 2 && return false, Inf, y
+    isopt == 1 && return true, bound, aj[y]
+    isopt == 2 && return false, Inf, aj[y]
     n, m = length(aj), length(ai)
     ii = ai[[1:ix-1;ix+1:m]]
     ci = bound
@@ -254,8 +258,8 @@ function branch_and_bound(A, aj, ai, inbound::S) where S<:Real
         bij = max(bij, cij)
         if bij < ci
             ci = bij
-            xi = jj[xx]
-            ji = j
+            xi = xx
+            ji = aj[j]
         end
     end
     return true, ci, [xi[1:ix-1];ji;xi[ix:m-1]]
@@ -281,7 +285,8 @@ function heuristics(A::AbstractMatrix{S}, inbounds::S) where S<:Real
     isopt = 1
     while !isempty(ii)
         kc = 0
-        ci, k = findmax(view(c, ii))
+        k = argmax(view(c, ii))
+        ci = target(view(c, ii))
         ic = ii[k]
         jc = y[ic]
         if ci > cc
@@ -307,5 +312,43 @@ function heuristics(A::AbstractMatrix{S}, inbounds::S) where S<:Real
         end
     end
     cc, ix, y, isopt
+end
+
+# brute-force calculation of minimum
+function bf(A)
+    c = typemax(eltype(A))
+    x = Int[]
+    for jj in allcomb(size(A,2), size(A,1))
+        cjj = norm(( A[jj[i], i] for i in axes(A,2)), Inf)
+        if cjj < c
+            c = cjj
+            x = jj
+        end
+    end
+    c, x
+end
+function allcomb(a::Integer, b::Integer)
+    allcomb.(b-a+1, b, 0:binomial(b, a) * factorial(a)-1)
+end
+function allcomb(m::Integer, n::Integer, z::Integer)
+    function op((a, b), k)
+        x, y = divrem(b, k)
+        [a; y], x
+    end
+    function op2((a,b), k)
+        j = 0
+        for l = 1:length(b)
+            if b[l] == 0
+                if j == k
+                    b[l] = 1
+                    return [a; l], b
+                else
+                    j += 1
+                end
+            end
+        end
+        (a, b)
+    end
+    foldl(op2, foldl(op, n:-1:m, init = (Int[], z))[1], init = (Int[], zeros(n)))[1]
 end
 

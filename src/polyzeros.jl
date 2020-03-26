@@ -207,111 +207,152 @@ which minimizes the term `maximum(dist(p[i], q[x[i]) for i in 1:length(p))`.
 """
 function subsetapprox(a::AbstractVector{T}, b::AbstractVector{T}, dist::Function) where T
     A = dist.(b, transpose(a))
-    S = eltype(A)
-    branch_and_bound(A, axes(A)..., typemax(S))
+    subsetapprox(A)
 end
 
-function branch_and_bound2(A, jj, ii, inbound)
-    res = branch_and_bound1(A, jj, ii, inbound)
-    ok, v, x = res
-    if ok
-        println("called b&b($inbound)")
-        display([[0;jj] [ii'; A[jj,ii]]])
-        if minimum(x) < 1 || maximum(x) > size(A,1)
-            println("wrong x after b&b:")
-            display(x')
-        end
-        vv, xx = result(A, x, ii)
-        if true # v != maximum(xx)
-            println("returning $v")
-            display([x xx]')
-        end
+function subsetapprox(A::AbstractMatrix{S}) where S<:Real
+    fi = zeros(Int, size(A, 2))
+    branch_and_bound(A, fi, typemax(S))
+end
+
+function branch_and_bound2(A, fi, inbound)
+    println("called b&b($fi <= $inbound)")
+    res = branch_and_bound1(A, fi, inbound)
+    v, x = res
+    println("returning $v")
+    if minimum(x) < 1 || maximum(x) > size(A,1)
+        println("wrong x after b&b:")
+        display(x')
+    end
+    if false
+        vv, xx = result(A, x)
+        display([x xx]')
     end
     res
 end
 
-function result(A, y, x)
-    z = getindex.(Ref(A), y, x)
+function result(A, y)
+    z = getindex.(Ref(A), y, axes(y)[1])
     target(z), z
 end
 
 function target(z)
-    norm(z, Inf)
+    norm(z, 2)
 end
 
-function branch_and_bound(A, aj, ai, inbound::S) where S<:Real
-    bound, ix, y, isopt = heuristics(view(A, aj, ai), inbound)
-    isopt == 1 && return true, bound, aj[y]
-    isopt == 2 && return false, Inf, aj[y]
-    n, m = length(aj), length(ai)
-    ii = ai[[1:ix-1;ix+1:m]]
-    ci = bound
-    xi = aj[y[[1:ix-1;ix+1:m]]]
-    ji = aj[y[ix]]
-    for j = 1:n
-        j == ji && continue
-        cij = A[aj[j], ai[ix]]
+function fix!(fj, fi, j, i)
+    if !iszero(fi[i])
+        fj[fi[i]] = 0
+    end
+    fi[i] = j
+    fj[j] = i
+end
+
+function checkfi(f)
+    g = f[f .> 0]
+    length(g) == length(unique(g))
+end
+
+function copyfi(fi, n)
+    fi = copy(fi)
+    fj = zeros(eltype(fi), n)
+    for k = 1:length(fi)
+        if fi[k] != 0
+            fj[fi[k]] = k
+        end
+    end
+    fi, fj
+end
+
+function branch_and_bound(A::Matrix{S}, fi, inbound::S) where S<:Real
+    isopt, bound, y, ix = heuristics(A, fi, inbound)
+    isopt == 1 && return bound, y
+    isopt == 2 && return Inf, y
+    n, m = size(A)
+    fi, fj = copyfi(fi, n)
+    fix!(fj, fi, y[ix], ix)
+    ci, xi = branch_and_bound(A, fi, bound)
+    if ci >= bound
+        ci, xi = bound, y
+    end
+    for j = sortperm(view(A, :, ix))
+        iszero(fj[j]) || continue
+        cij = A[j,ix]
         cij > ci && continue
-        jj = aj[[1:j-1;j+1:n]]
-        ok, bij, xx = branch_and_bound(A, jj, ii, ci)
-        ok || continue
-        bij = max(bij, cij)
+        fix!(fj, fi, j, ix)
+        bij, xx = branch_and_bound(A, fi, ci)
+        isinf(bij) && continue
         if bij < ci
             ci = bij
             xi = xx
-            ji = aj[j]
         end
     end
-    return true, ci, [xi[1:ix-1];ji;xi[ix:m-1]]
+    ci, xi
 end
 
-function heuristics(A::AbstractMatrix{S}, inbounds::S) where S<:Real
+function heuristics(A::AbstractMatrix{S}, fi::V, inbounds::S) where {S<:Real,V<:AbstractVector{Int}}
 
     n, m = size(A)
     m <= n || throw(ArgumentError("first vector longer than second vector"))
-    function findmin2(i, jj)
-        vi = findmin(A[jj,i])
-        vi !== nothing ? vi : (typemax(S), 0)
-    end
-    c = Vector{S}(undef, m)
-    y = Vector{Int}(undef, m)
-    for i = 1:m
-        c[i], y[i] = findmin2(i, 1:n)
-    end
-    ii = collect(1:m)
-    jj = collect(1:n)
-    cc = zero(S)
-    ix = 0
-    isopt = 1
-    while !isempty(ii)
-        kc = 0
-        k = argmax(view(c, ii))
-        ci = target(view(c, ii))
-        ic = ii[k]
-        jc = y[ic]
-        if ci > cc
-            if iszero(cc) && ci >= inbounds
-                return ci, ic, y, 2
+    function findmin2(i, fj)
+        cm, jm = typemax(S), 0
+        for j = axes(fj)[1]
+            if iszero(fj[j]) && A[j,i] < cm
+                cm = A[j,i]
+                jm = j
             end
-            cc = ci
+        end
+        cm, jm
+    end
+    findmin2(i, fj, fi) = fi[i] == 0 ? findmin2(i, fj) : (A[fi[i],i], fi[i])
+    function findmax2(c, fi)
+        cm, ii = zero(S), 0
+        for i = axes(fi)[1]
+            if iszero(fi[i]) && c[i] > cm
+                cm = c[i]
+                ii = i
+            end
+        end
+        cm, ii
+    end
+
+    fi, fj = copyfi(fi, n)
+    c = similar(fi, S)
+    y = similar(fi)
+
+    for i = 1:m
+        c[i], y[i] = findmin2(i, fj, fi)
+    end
+    ci = target(c)
+    if ci > inbounds # the most optimistic estimation can't be better than inbounds
+        return 2, ci, y, 0
+    end
+    ix = 0
+    bb = zero(S)
+    isopt = 1
+    free = count(iszero, fi)
+    while free > 0
+        ci, ic = findmax2(c, fi)
+        jc = y[ic]
+        if ci > bb
+            bb = ci
             ix = ic
         end
-        deleteat!(ii, k)
-        deleteat!(jj, findfirst(isequal(jc), jj))
-        for i in ii
-            if y[i] == jc
-                ci, k = findmin2(i, jj)
-                y[i] = jj[k]
-                c[i] = ci
-                if ci > cc
-                    cc = ci
+        fix!(fj, fi, jc, ic)
+        free -= 1
+        for i in 1:m
+            if fi[i] == 0 && y[i] == jc
+                c[i], y[i] = findmin2(i, fj)
+                if c[i] > bb
+                    bb = ci
                     ix = i
-                    isopt = 0
                 end
+                isopt = 0
             end
         end
     end
-    cc, ix, y, isopt
+    cc = target(c)
+    isopt, cc, y, ix
 end
 
 # brute-force calculation of minimum
@@ -319,7 +360,7 @@ function bf(A)
     c = typemax(eltype(A))
     x = Int[]
     for jj in allcomb(size(A,2), size(A,1))
-        cjj = norm(( A[jj[i], i] for i in axes(A,2)), Inf)
+        cjj = target(A[jj[i], i] for i in axes(A,2))
         if cjj < c
             c = cjj
             x = jj
